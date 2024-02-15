@@ -1,15 +1,11 @@
-# Glossary
+# Networking Terms Glossary
 
 ## Name
-**Glossary** is a topical manifest of terms you're likely to come across in the networking arena.
+**Networking Terms Glossary** is a topical manifest of terms you're likely to come across in the networking arena.
 
 ## Table Of Contents
 
 [[_TOC_]]
-
-## See also
-
-- [Bookmarks](Bookmarks.md)
 
 ## Topical
 
