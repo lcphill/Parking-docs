@@ -1,0 +1,13 @@
+steps to create docker "image" from iso "image"
+
+mkdir rootfs
+sudo mount -o loop MY_ISO.iso rootfs
+find rootfs -type f | grep filesystem.squashfs
+rootfs/casper/filesystem.squashfs
+rootfs/casper/filesystem.squashfs.gpg
+mkdir unsquashfs
+sudo unsquashfs -f -d unsquashfs/ rootfs/casper/filesystem.squashfs
+sudo tar -C unsquashfs -c . | docker import - MATT_CATEGORY/MATT_NEW_IMG
+SOME_SHA_IS_SPIT_OUT
+docker run -h ubuntu -i -t MATT_CATEGORY/MATT_NEW_IMG bash
+bash> exit
