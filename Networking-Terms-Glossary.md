@@ -821,8 +821,8 @@
    - The core principles on which OTV operates are the use of a control protocol to advertise MAC address reachability information 
       - instead of using data plane learning and packet switching of IP encapsulated Layer 2 traffic
       - instead of using circuit switching for data forwarding.
-- P2P
-   - Although this nominally means "peer to peer", the significance for networking is more to "network device to network device", such as leaf-to-spine, spine-to-superspine, and vice-versa
+- P2P (point-to-point)
+   - Although this term might be construed as "peer to peer" in a non-network-fabric context, the significance of P2P as applied to the network fabric is that of "network device to network device", such as leaf-to-spine, spine-to-superspine, and vice-versa
    - Links to connected-endpoints may be point-to-point, but typically MLAG/ESI-LAG is employed
 - PTP (precision time protocol)
    - Protocol used to synchronize clocks throughout a computer network.
