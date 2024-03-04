@@ -61,6 +61,8 @@
    - Port-based authentication protocol
    - Application: switch access point (to include and wireless)
 - AAA network (authentication/authorization/accounting)
+- ACI (application centric infrastructure)
+  - SDN (software-defined networking) solution, a la network automation, developed by Cisco
 - ACL/firewall-rules AKA "filter"
 - AF (address family) / AFI (address family identifier) / SAFI (subsequent AFI)
    - Fields within MP-BGP::NLRI (see also)
