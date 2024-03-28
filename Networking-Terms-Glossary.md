@@ -3,10 +3,6 @@
 ## Name
 **Networking Terms Glossary** is a topical manifest of terms you're likely to come across in the networking arena.
 
-## Table Of Contents
-
-[[_TOC_]]
-
 ## Topical
 
 - Convention
@@ -19,7 +15,11 @@
 - Convenience shortcuts (invariably, these artifacts are confounded by way of virtualization):
    - L2: OSI layer 2 / ARP bridging / bridged / switch device / data link layer (translate MAC-and-IPAM, with broadcast)
    - L3: OSI layer 3 / IP routing   / routed  / router device / network layer   (IP next hop)
+- Common shortcuts
    - IP: IP address, IPAM (IP address management)
+   - IF: interface
+   - CLI: command language interface
+   - CRUD: create/read/update/delete
 - TODOs/TBDs:
    - storage, compute, login/mgmt, m2/c2, VMs, firewalls, north' side gateways:
       - E.G., how to tweak the fabric/DC for these use cases?
@@ -56,19 +56,35 @@
    - stacked VLANs or Double VLAN tagging (Q-in-Q means VLAN tunneling, where the 'Q' stands for 802.1Q)
 - 802.1Q (AKA dot1q): VLAN over Ethernet
    - Also see: 802.1a, VLAN
-   - "dot1q" is a system of VLAN tagging for Ethernet frames and accompanying bridge/switch handling procedures.
+   - Definitional:
+      - "dot1q" is a system of VLAN tagging for Ethernet frames and accompanying bridge/switch handling procedures.
+      - A tunneling protocol encapsulating traffic from multiple customer VLANs with a singular outer service provider VLAN, avoiding overlapping IPAM issues.
+      - Tunneling preserves the inner VLANs. Fabric devices' forwarding decisions are based on the outermost VLAN tag.
+      - A dot1q-tunnel port sits at the edge of the tunneled network.  Packets arriving at a tunnel port are encapsulated with an outer 802.1Q tag that can be trunked between multiple devices [like a traditional VLAN]. When exiting a dot1-tunnel port, the outer tag is removed to revert the customer traffic to its original tagged or untagged state.
 - 802.1X (AKA dot1x):
    - Port-based authentication protocol
    - Application: switch access point (to include and wireless)
 - AAA network (authentication/authorization/accounting)
+   - PAE (Port access entity): A connected-endpoint is not allowed to send/receive traffic through a port until it is authenticated by a RADIUS server
+   - EAP (Extensible Authentication Protocol)
+   - CLI: Also see ```dot1x``` (refer to appropriate vendor' command reference manual)
+   - MAC security: Switch port that is restricted by number of MACs and/or specified MACs.
+      - ```switchport port-security maximum <n>``` # default is '1'
+      - ```mac address-table static 0034.24c2.8f11 vlan 10 interface ethernet 7```
 - ACI (application centric infrastructure)
-  - SDN (software-defined networking) solution, a la network automation, developed by Cisco
+   - SDN (software-defined networking) solution, a la network automation, developed by Cisco
 - ACL/firewall-rules AKA "filter"
+   - Also see route-map for detail
 - AF (address family) / AFI (address family identifier) / SAFI (subsequent AFI)
-   - Fields within MP-BGP::NLRI (see also)
+   - See also: MP-BGP, NLRI
+   - Definitional
+      - Declares the set of network layer protocols to which the address(es) carried in the nexthop field must belong. That is, the encoding format of the nexthop address.
+      - ```default bgp ipv4```
+         - Effectively, ipv4-unicast # Versus ipv6, noting ipv6 entirely negates ipv4 (Arista)
    - Address family was added to NLRI to differentiate network layer protocols in MP-BGP
+      - The AF data structure is used to define route advertising status to BGP neighbor addresses.  Each neighbor address is assigned an activity level for each address family on the switch.  The switch sends capability and network prefix advertisements to neighbors that are active within specified address families.
    - SAFI is supported within the L2VPN address family
-   - Within the IPv4 and IPv6 address families, SAFIs such as Multicast Distribution Tree (MDT), tunnel, and VRF exist.
+      - Within the IPv4 and IPv6 address families, SAFIs such as Multicast Distribution Tree (MDT), tunnel, and VRF exist.
 - Anycast: (AKA, distributed anycast gateway)
    - Also see: MLAG, VARP
    - IP addressing scheme allowing multiple distributed physical nodes to share the same IP.
@@ -77,9 +93,16 @@
 - ARP (address resolution protocol):
    - L2/ethernet' broadcast/response (e.g., what is the MAC for IP 'a.b.c.d'?), noting ethernet uses MAC to transmit.
    - Related: GARP (gratuitous ARP), RARP (reverse ARP) and also see VARP
-- AS (autonomous system); Also see: BGP
+   - The ARP cache holds correlated addresses (IP <=> MAC and IF/port)
+   - Proxy-ARP: fabric device forwards packet to remote destination.
+   - Default ARP-timeout is 14400 seconds (4 hours)
+      - Static ARP entries never timeout
+- AS (autonomous system)
+   - Also see: ASN, BGP, RIR/LIR, IANA
+   - The protocol context is BGP, as administrated from official to organizational to local/private fabric management.
+   - ASNs are assigned, whereby public connected devices are managed officially and local/private fabrics employ private ASNs.
 - ASN (Autonomous System Number)
-   - Also see: DC, POD, L3LS, BGP
+   - Also see: AS, BGP, DC, POD, L3LS
    - Private ASN: contiguous block of 1023 ASNs (16-bit), namely: 64512 through 65534, inclusive.
       - Generally speaking, the fabric should be using private ASNs
    - common-spine/distinct-leaf arrangement
@@ -107,39 +130,51 @@
    - BDF is not needed on links with LFS (link fault signaling)
 - BGP (border gateway protocol) / MP-BGP (multi-protocol extensions to BGP)
    - Also see: ASN, AF/NLRI, EVPN/EVPN-control-plane
-   - Reminder that EVPN utilizes MP-BGP
-   - For our literary purposes, we equate BGP to MP-BGP and the terms are otherwise used interchangeably.
-   - For clarification: As per RFC's, BGP does not present a control-plane. This construct is presented in EVPN.
-   - BGP was developed to support packet routing across the global internet, primarily by exchanging reachability information among edge routers, identified by ASNs.
-   - Two sessions types (elaborated below): iBGP (internal-BGP) and eBGP (external-BGP).
-   - BGP extensions allow for specifications to augment and/or modify core BGP behavior. In particular, Multi-Protocol extensions (MP-BGP) -- RFC-2283 -- are necessary to support EVPN functions.
-   - key benefits:
+   - RFCs: BGP version 4 is defined by RFC-4271; MP-BGP is "BGP-4+" (defined by RFC-4760 as superseding RFC-2283)
+   - BGP extensions allow for specifications to augment and/or modify core BGP behavior, such as MP-BGP.
+      - Reminder that EVPN utilizes MP-BGP (multi-protocol, multiple address families)
+      - For our literary purposes, we equate BGP to MP-BGP and the terms are otherwise used interchangeably.
+   - Definitional
+      - BGP was developed to support packet routing across the global internet, primarily by exchanging reachability information among edge routers, identified by ASNs.
+      - An EGP (exterior gateway protocol) exchanging routing information among neighboring routers in multiple autonomous systems by way of TCP sessions (port 179).
+      - Two sessions types (elaborated below): iBGP (internal-BGP) and eBGP (external-BGP).
+         - External BGP (EBGP) peers operate between autonomous systems (ASs). Border routers are on AS boundaries and exchange information with other autonomous systems. The primary function of border routers is distributing routes.
+         - Internal BGP (IBGP) peers operate within a single autonomous system (AS). Internal routers do not distribute route updates that they receive.
+      - For clarification: As per RFC's, BGP does not present a control-plane. This construct is presented in EVPN.
+   - key benefits, notables, caveats:
       - Mature, proven stability, scalability (e.g., ability to learn hundreds of thousands of MAC entries).
       - Multi-Vendor interoperability
       - Native Traffic Engineering (TE) capabilities
       - Minimized information flooding (compared to linkstate protocols)
+      - BGP detects routing loops as defined by AS paths and path attributes.
+      - Graceful Restart: allow a BGP-speaker to continue forwarding traffic.
+      - Arista only supports 4-byte ASNs.
+   - BGP connection states ("per connection" [for emphasis]):
+      - Idle: Initialization state -- inbound BGP connection attempts are blocked (i.e., not listened), initiate connection to peer, then transition to the Connect state.
+      - Connect: Wait for initial' connection to complete, follow up with send of OPEN message to peer. then transition to the OpenSent state if successful.
+         -If unsuccessful, set the ConnectRetry timer and transition to the 'Active' state upon expiry.
+      - Active: Reset ConnectRetry timer to zero and revert to 'Connect' state.
+      - OpenSent: Waiting for an OPEN message from peer, then transition to the OpenConfirm state.
+      - OpenConfirm: Waiting for a keepalive message from peer, then transition to Established state. On timeout or error, transition to Idle state.
+      - Established: Peers exchange UPDATE messages about routes they advertise.  If an UPDATE message contains an error, then send a NOTIFICATION message and transition to Idle state.
    - BGP-instance/multi-instance
-      - Different BGP-instance's can have the same AS number but cannot have the same name.
+      - Different BGP-instance's can have the same AS number, but cannot have the same name.
          - Uniquely identified by "name".
+         - One BGP-instance maps to one-and-only-one ASN (sub-ASNs notwithstanding)
       - A BGP router can run multiple BGP processes/threads.
       - Each BGP process/thread corresponds to a BGP-instance.
       - Independent BGP-routing-information per BGP-instance.
-      - Possible: multiple public address families for a BGP-instance.  However, each public AF (except public VPNv4/VPNv6 AFs) must belong to only one BGP-instance.
+      - Possible: multiple public address families for a BGP-instance. However, each public AF (except public VPNv4/VPNv6 AFs) must belong to only one BGP-instance.
       - Possible: multiple VPN instances for a BGP-instance.
          - Each VPN instance can have multiple AFs.
          - A VPN instance (think EVPN) can belong to only one BGP-instance.
-   - BGP-community:  extra information addended to one of more route-prefixes, as advertised to BGP neighbors.  
-      - Four well known BGP-community's:
-         - Internet: advertise route-prefix to all BGP neighbors.
-         - No-Advertise: do not advertise route-prefix to any BGP neighbors.
-         - No-Export: do not advertise route-prefix to any eBGP neighbors.
-         - Local-AS: do not advertise route-prefix outside of the sub-AS (used for BGP-confederations).
-      - The EVPN control-plane makes extensive use of Extended-Communities in BGP.  This is done for signaling VNIs, Route-Targets, EvpnRouterMac, etc. between VTEPs.
+      - The EVPN control-plane makes extensive use of Extended-Communities in BGP. This is done for signaling VNIs, Route-Targets, EvpnRouterMac, etc. between VTEPs.
    - BGP-routing-information
       - Caveat: Vendor implementations vary on internals and vernaculars. As for protocol message format, see RFC for details.
       - BGP-Neighbor-Table: information about neighbors (e.g., ASNs)
       - BGP-Topology-Table / Routing-Information-Base (RIB): local and global tables containing learned NLRI
          - I.E., all the routes from all the neighbors, plus various routing to the same network with differing attributes.
+         - Catalog network destinations and associated route distances.
       - BGP-Routing-Table: the main routing table containing only the best routes from the RIB. After BGP has selected the best path to a network, that path is added to the main IP routing table.
          - BGP routes do not record outgoing-interface, but only the Next-Hop IP (via NEXT_HOP attribute).
          - Recursive lookups may occur.
@@ -148,6 +183,20 @@
          - loc-RIB: Apply filtering and policies against Adj-RIBs-In, then declare preferred routes (deduction, reduction)
          - Adj-RIBs-Out: selected routes from loc-RIB after applying outbound filtering and policies
       - Metrics such as path and hop count.
+      - As related to messaging (i.e., UPDATE message content): Route detail includes destination prefix, prefix length, AS paths, nexthop, local-preference/acceptance policy. UPDATE messages also list destinations to which the router no longer offers connectivity.
+         - Route-maps are used in BGP [messaging] to directly filter IPv4 unicast routes.
+      - BGP neighbors maintain connections by exchanging keepalive, UPDATE, and NOTIFICATION messages.
+         - Internal peers receive route updates without distributing them.  That is, do not re-advertise IBGP' learned routes (prevent loops)
+         - External peers receive route updates and [re]distribute to internal and external peers.  That is, communicate EBGP' learned routes to all peers
+      - Static BGP neighbor (manually configured)
+         - May belong to a static peer-group
+         - Static BGP peer-group: configuration as applied to all members of the group (overrides notwithstanding)
+         - CLI: ```neighbor <ip> remote-as <asn>```
+      - Dynamic BGP neighbor
+         - Must belong to a dynamic peer-group, and can only be configured as a group.
+            - Can create a static peer-group using 'neighbor <group-name> peer-group'
+         - Members of a dynamic peer-group cannot be configured individually.
+         - CLI: ```bgp listen range <ip>/24 peer-group <name> remote-as <asn>```
    - BGP-Route-Advertisement / BGP-Route-Announcement (RA):
       - The process of broadcasting BGP-routing-information to neighboring routers.
       - BGP announces: route-prefix and length, along with the corresponding PA (path attributes).
@@ -157,12 +206,12 @@
       - Definition: neighbor routers assigned differing ASNs.
       - Traditionally placed at the edge/border router responsible for inter-connectivity to another autonomous system (or the Internet).
       - Routes are adverstised to both eBGP and iBGP neighbors (next hop is set to local router).
-      - ASN path can be used for loop prevention.
+      - AS path can be used for loop prevention.
       - Underlay routing protocol is typically configured as eBGP.
    - iBGP
       - Definition: neighbor routers assigned the same ASN.
       - Traditionally used inside an autonomous system on internal routers.
-         - All devices must form a full mesh topology or employ Route-reflectors/BGP-Confederation to accomplish route learning functions.
+         - All devices must form a full mesh topology or employ route-reflectors/BGP-Confederation to accomplish route learning functions.
       - Routes can only be advertised to eBGP neighbors (next hop is untouched).
          - Natural (implicit) loop prevention is exploited via this constraint (see "ASN::common-spine")
       - Explicit loop prevention can be accomplished using BGP-Split-Horizon.
@@ -170,21 +219,118 @@
       - Overlay routing protocol (i.e., VXLAN) is typically configured as iBGP
       - Characteristics and caveats:
          - Source (ingress) and Dest (egress) VTEPS are ToRs (i.e., leaf's)
-         - iBGP peering only exists within the IPv4 Unicast Address-Family (not EVPN).  Otherwise, iBGP peering via EVPN address-family just introduces unnecessary control-plane state and configuration.
+         - iBGP peering only exists within the IPv4 Unicast Address-Family (not EVPN). Otherwise, iBGP peering via EVPN address-family just introduces unnecessary control-plane state and configuration.
+         - Local-preference is a metric that IBGP sessions use to select an external route.  Preferred routes have the highest local-preference value. UPDATE packets include this metric in the LOCAL_PREF field ('neighbor <ip> [import|export]-localpref <n>').
+            - import-versus-export ~= ebgp-versus-ibgp
+   - AS-path access-list: A named list of permit and deny statements using regular expressions (route-map match clause) to filter routes based on their AS path attribute
+      - CLI: ```ip as-path access-list <list_name> <permit|deny> <regex> <any|egp|igp|incomplete>```
+   - BGP-community:  extra information addended to one of more route-prefixes, as advertised to BGP neighbors.  
+      - Also see EVPN' BGP-extended-community
+      - Caveat: Not to be confused with confederation nor route-reflection
+      - Definitional
+         - A group of subnet address prefixes that share a common identifying attribute.
+         - Simplifies routing policies by consolidating IP spaces into logical entities that BGP speakers can address to accept, prefer, and distribute routing information.
+      - The BGP-community attribute is a 32 bit value formatted as follows:
+         - An integer between 0 and 4294967040
+         - AA:NN, where AA specifies an ASN (0-4294967295) and NN specifies a community number (0-65535)
+      - Four well known BGP-community's:
+         - Internet: advertise route-prefix to all BGP neighbors.
+         - No-Advertise: do not advertise route-prefix to any BGP neighbors.
+         - No-Export: do not advertise route-prefix to any eBGP neighbors.
+         - Local-AS: do not advertise route-prefix outside of the sub-AS (used for BGP-confederations).
+      - BGP-community values are assigned to a set of subnet prefixes through route-map set commands.
+         - Route-map match commands subsequently use BGP-community values to filter routes.
+         - Standard-community lists refer to route-maps by name or number.
+         - Expanded-community lists reference route-maps through regular expressions.
+         - The switch uses the following ```ip community-list``` commands to filter BGP-community routes into a BGP domain:
+            - ```ip community-list standard```
+            - ```ip community-list expanded```
+            - ```ip extcommunity-list standard```
+            - ```ip extcommunity-list expanded```
+   - BGP peer group
+      - See also: BGP template (alternative)
+      - Definitional
+         - Neighbors assigned to peer group (singular)
+         - Assign: policy, NLRIs, authentication, convergence settings, route settings, next-hop-self, etc
+      - Applicable to Arista AVD / eos_designs (e.g., IPv4-UNDERLAY-PEERS, MLAG-IPv4-UNDERLAY-PEERS) 
+   - BGP Confederation
+      - Caveat: Not BGP route-reflection
+      - Subsystems (that is, sub-ASs) are formed, while remaining to appear externally as a singular AS.
+      - Switches participating in sub-ASs communicate via IBGP, while communicating out-of-bounds via EBGP.
+      - To configure a BGP confederation, perform these configuration tasks on each device within the confederation:
+         - Configure the local-ASN. The local-ASN indicates membership in a sub-AS.  All devices with the same local-ASN are members of the same sub-AS. BGP devices use the local-ASN when communicating with other BGP4 devices in the confederation.
+         - Configure the confederation-ID (```bgp confederation identifier <asn>```).  The confederation-ID is the ASN by which external BGP devices communicate with the confederation (and vice versa).  A BGP device outside the confederation is not aware of the confederation.  The confederation-ID must differ from sub-AS numbers (next).
+         - Configure the list of the sub-AS numbers that are members of the confederation.  Devices in a sub-AS exchange information via IBGP, while devices in different sub-ASs use EBGP.
+           - CLI: ```bgp confederation peers <asn_range>```
+   - BGP route-aggregation
+      - TBD: Presumption is that this construct has no relation to confederation nor route-reflection
+      - Combines the characteristics of multiple routes into a single route for advertisement by the BGP speaker. This reduces the volume of advertisement traffic handling as well as management convenience factors.
+      - Any routes configured on the switch that lie within that subnet then become contributors to the aggregate.
+      - Aggregate routes are advertised only after they are redistributed.
+      - Aggregate routes are redistributed automatically, and their redistribution cannot be disabled.
+      - Aggregate routes are created with the ```aggregate-address``` command, which takes an IP subnet as an argument.
+         - ```AS_PATH```, ```ATOMIC_AGGREGATE```, ```as-set```, ```attribute-map```, ```summary-only```, ```match-map``` (what's in / what's not in)
+   - BGP route-reflection
+      - Caveat: Not BGP-confederation and, presume, no relation to BGP route-aggregation
+      - Motivation: Cut down on high volume of IBGP messaging (when scaled)
+      - Divide an AS into clusters, whereby a cluster contains [1..n] BGP route-reflectors and a group of clients to which they re-advertise route information.
+      - Multiple BGP route-reflectors provide redundancy.
+      - client-to-client reflection: If the clients are fully meshed, client' mirroring is unnecessary and should be disabled.
+      - Each BGP route-reflector has a cluster-ID (```bgp cluster-id <n>```)
+         - If the cluster has only one BGP route-reflector, the cluster-ID is its router ID.
+         - If a cluster has multiple BGP route-reflectors a 4-byte cluster-ID is assigned to all BGP route-reflectors in the cluster.
+   - BGP route-reflector
+      - Also see: iBGP
+      - The iBGP full-mesh requirement influences the use of route reflectors to simplify configuration.
+         - The formula to compute the number of sessions required for a full mesh is v * (v - 1)/2, where v is the number of BGP' enabled devices.
+         - Obviously, the full-mesh model does not scale well.
+      - Using a BGP route-reflector, routers are grouped into clusters, employing numeric identifiers unique to the autonomous system (AS).
+         - Within the cluster, configure a BGP session from a single router (the route-reflector) to each internal peer.
+   - Notable BGP commands
+      - ```router bgp <asn>```, ```timers bgp <keepalive-time> <hold-time>```, ```neighbor <ip> maximum-routes <n>```, ```ip as-path access-list```
+      - ```bgp default ipv4-unicast``` specifies the default activity level of BGP neighbor addresses for a specified AF.
+      - ```neighbor activate``` specifies deviations from default AF activity level for a specified neighbor IP.
+      - ```neighbor route-map``` applies a route-map to inbound or outbound BGP routes.
+         - As applied to an outbound route, only advertise routes matching at least one section of the route-map.
+         - Only one outbound route-map and one inbound route-map can be applied to a specified neighbor.
+      - ```neighbor weight <0-65535>```: Default 32768; Weight is the first parameter that the BGP best-path selection algorithm considers.
+         - TBD: command to declare "I-AM-IBGP" versus "I-AM-EBGP". This notion appears to be determined by "same ASN" versus "different ASN".
+      - The ```network``` command specifies a prefix to advertise as an originating route (through UPDATE packets to BGP peers).
+         - The host portion of the specified network address is "zero'd": I.E., 192.3.2.4/24 is stored as 192.3.2.0/24.
+         - An optional route-map CLI argument can be used to assign attributes to the network.
+      - ```bgp advertise-inactive```
+         - This is a global setting, but can be overridden on a per-VRF' basis.
+         - By default, BGP only advertises active routes in the RIB. This can contribute to dropped traffic. 
+         - Advertising inactive routes can minimize traffic loss by providing alternative routes.
+           - An inactive route may be due to an overriding preferred route.  Meaning, the inactive route is otherwise traversable (just [potentially] unknown to peers).
+      - ```distance bgp```
+         - Assign an administrative distance to routes that the switch learns.
+         - Used to select a route between protocols providing routing information to the same destination.
+         - Distance values range from 1 to 255; lower distance values correspond to higher reliability.
+         - Exclude any/all routes with a distance of 255.
+         - External, Internal, and Local routes:
+           - external: learned from an external neighbor. Default: 200.
+           - internal: learned from a BGP entity within the same AS. Default: 200.
+           - local: "self" defined route or as redistributed from another process. Default: 200.
+      - ```redistribute [connected|rip|static] route-map <name>``` # route-map CLI argument is optional
+         - connected: routes that are established when IP is enabled on an interface.
+         - rip: from an rip domain
+         - static: static ip routes
+      - ```router-id <string>``` # local router-ID.
+         - When no ID has been specified, the local router-ID is set to the following:
+           - The loopback IP address when a single loopback interface is configured.
+           - The loopback with the highest IP address when multiple loopback interfaces are configured.
+           - The highest IP address on a physical interface when no loopback interfaces are configured.
+      - ```vrf <name>``` # sequence is: "router bgp <asn>; vrf <name>; ...; exit"
+         - E.G., 'graceful-restart', 'no bgp advertise-inactive', etc etc
 - BGP-unnumbered
    - See also: RFC-8950 (Advertising IPv4' NLRI with an IPv6 Next Hop)
-   - Not configured in our environment/fabric(s), as we employ RFC-3021 (Using 31-Bit Prefixes on IPv4 Point-to-Point Links)
+   - Alternative is to employ RFC-3021 ("Using 31-Bit Prefixes on IPv4 Point-to-Point Links")
    - Definitional
       - Peer discovery employs extended next hop encoding (ENHE)
       - Applicable to point-to-point links
       - IPv6' based uderlay
       - CLOS topology whereby all nodes are assigned unique ASN numbers
-- BGP peer group
-   - See also: BGP template (alternative)
-   - Definitional
-      - Neighbors assigned to peer group (singular)
-      - Assign: policy, NLRIs, authentication, convergence settings, route settings, next-hop-self, etc
-   - Applicable to Arista AVD / eos_designs (e.g., IPv4-UNDERLAY-PEERS, MLAG-IPv4-UNDERLAY-PEERS) 
 - bonded server: As in, participates in "link aggregation"
 - BPDU (Bridge Protocol Data Unit)
    - See also: RSTP (BPDU came into existance at the proposal of RSTP).
@@ -233,22 +379,35 @@
 - CPLD (complex programmable logic device)
 - CRB (central routing and bridging)
    - versus ERB (edge-routed bridging)
+- DCB (Data Center Bridging) / DCBX (DCB [Capability] Exchange)
+   - DCBX works with LLDP to allow switches to exchange information (TLV) about their DCB capabilities and configuration to auto-negotiate common Priority-Based Flow Control (PFC) parameters.
 - DPDK: data plane development kit
 - DHCP relay agent: any TCP/IP host used to forward requests/replies between the DHCP server/client when the server is on a different network.
 - DUT (device under test)
-- ECMP (equal-cost multipath)
-   - A network routing strategy by which traffic between the same source and destinations is transmitted across multiple paths of equal cost.
+- ECMP (Equal Cost Multipath Routing) and WCMP (weighted cost multipath routing)
+   - Definitional
+      - Load sharing/balancing: a routing strategy where traffic between the same source and destination is transmitted across multiple paths that have equal routing metric values.
+      - The data content of a frame/packet, as representing/identifying its stream/flow, is hashed into an index to select 'nexthop'
    - ```CLI> maximum-paths 2 # I.E., the number of spines. This command enables ECMP in BGP.```
+   - Hash polarization (AKA hash imbalance):
+      - Different switches reuse the same hash function such that the resultant path selection provides poor load balancing.
+      - This is primarily due to the consistent data content of a flow/stream (should be somewhat obvious).
+      - Random seeding is employed, but otherwise ineffective (because of the requirement for consistent routing of a flow/stream).
+         - CLI: ```ip load-sharing <platform> <n>``` # where 'n' is the seed value
+         - CLI: ```ip hardware fib ecmp resilience <CIDR> capacity <n> redundancy <n>```
 - EtherChannel
    - Also see: channel-group, port-channel, LAG
    - Definitional
       - A LAG' oriented port-channel architecture -- developed by Kalpana (Cisco) -- whereby a group of physical Ethernet links create a singular logical Ethernet link for the purpose of providing fault-tolerance and higher bandwidth.
    - Whereas a port-channel interface is the logical representation of an EtherChannel.
       - Configuration changes on a port-channel interface are applied to the individual interfaces within an EtherChannel.
+- Error-disabled port/interface (similar to link-down)
+   - Conditions: bpduguard, link-flap, no-internal-vlan, portchannelguard, portsec, tapagg, uplink-failure-detection, xcvr_unsupported
+   - CLI: ```errdisable recovery <cause>; errdisable recovery interval <nnn>```
 - ES (Ethernet segment)
    - Also see: ESI-LAG
    - Definitional: The set of Ethernet links in a multi-homing configuration between PE and CE
-      - Emphasis is placed on hardwired (physical cable), such that the number of participants is small and otherwise isolated.  Physical cable is a conceptual hint vice a hard requirement, as sophisticated architectures (e.g., L3LS-EVPN) expand the notional.
+      - Emphasis is placed on hardwired (physical cable), such that the number of participants is small and otherwise isolated. Physical cable is a conceptual hint vice a hard requirement, as sophisticated architectures (e.g., L3LS-EVPN) expand the notional.
       - Logically, the connection is characterised by a single gateway.
    - active-standby multi-homing: the links that constitute an Ethernet segment form a bridge-domain (BD).
    - active-active  multi-homing: an Ethernet segment constitues a LAG/MLAG.
@@ -260,7 +419,7 @@
       - The last three octets include the ES' LD (Local-Discriminator) value defined under the interface port-channel.
 - ESI-LAG: (see also: alphabet soup of usual suspects)
    - EVPN multi-homing a la MLAG
-      - In Arista's eos_designs, ESI-LAG equates to 'mlag_peer_l3_vlan' (vlan4093 is the SVI representing the iBGP' peering connection).  Arista's MLAG architecture transcends physical cable to logical (hence, "l3_vlan", whereby implying underlay).
+      - In Arista's eos_designs, ESI-LAG equates to 'mlag_peer_l3_vlan' (vlan4093 is the SVI representing the iBGP' peering connection). Arista's MLAG architecture transcends physical cable to logical (hence, "l3_vlan", whereby implying underlay).
    - Leaf peers must advertise the same system-MAC address to a multi-homed CE.
    - DF (designated forwarder)
       - Decide which PE device is allowed to forward BUM traffic (per VLAN) to and from the ES (ethernet segment).
@@ -346,15 +505,15 @@
       - type-2: MAC/IP Advertisement: RD, ESI, E-tag-ID/VID, MAC, IP, MPLS-labels (1 and 2)
          - used by VTEPs to advertise MAC address (L2) and/or IP address (L3) information to each other.
       - type-3: Inclusive Multicast Ethernet Tag (IMET) route: Maps VNI to BUM receival -- RD, Ether-tag-ID/VID, IP, originating-router-IP
-         - used by VTEPs to advertise L2VNIs and VTEP IP addresses to each other for creating an ingress replication list.  That is, automatic VTEP discovery and dynamic VXLAN tunnel establishment.  If a reachable route to the peer VTEP's IP address exists, a VXLAN tunnel is established from the local VTEP to the peer VTEP.  Further, if the local and remote VNIs are the same, an ingress replication list is created for BUM packet forwarding.
+         - used by VTEPs to advertise L2VNIs and VTEP IP addresses to each other for creating an ingress replication list. That is, automatic VTEP discovery and dynamic VXLAN tunnel establishment. If a reachable route to the peer VTEP's IP address exists, a VXLAN tunnel is established from the local VTEP to the peer VTEP. Further, if the local and remote VNIs are the same, an ingress replication list is created for BUM packet forwarding.
       - type-4: Ethernet Segment route: RD, ESI, IP, originating-router-IP
-         - Carries the ES Import Route-Target Extended community Path Attribute, whose value is the system-MAC used with the ES.  In this way, ES members are able to import the NLRI into their BGP' Loc-RIB (i.e., local routing information base).
+         - Carries the ES Import Route-Target Extended community Path Attribute, whose value is the system-MAC used with the ES. In this way, ES members are able to import the NLRI into their BGP' Loc-RIB (i.e., local routing information base).
       - type-5: IP-Prefix: L3VPN (VRF): RD, ESI, Ether-Tag, IP, GW-IP, MPLS-label
-         - used to transmit network segment routes and/or host-IPs.  If a host IP address is carried, the route is used to advertise a host or network segment route in a distributed gateway scenario.  If a network segment address is carried, the route can be advertised to allow hosts on the VXLAN network to access an external network.
+         - used to transmit network segment routes and/or host-IPs. If a host IP address is carried, the route is used to advertise a host or network segment route in a distributed gateway scenario. If a network segment address is carried, the route can be advertised to allow hosts on the VXLAN network to access an external network.
       - Arista' EOS uses types 2, 3 and 5 (from their EVPN deployment guide)
    - Route-Target (RT): RFC-4684
       - Definitional
-         - BGP extended community that conditions NLRI with VPN membership (RT is 8 octets)
+         - BGP-extended-community that conditions NLRI with VPN membership (RT is 8 octets)
          - PE routers use Route Target (RT) extended communities to control the distribution of routes into VRFs
          - Mechanical: IP-VRF/MAC-VRF advertisement of RT membership to peer VTEPs (prefix consists of originating ASN plus RT)
          - operation: import, export or both
@@ -365,6 +524,7 @@
       - RT is placed into the Extended Communities field of the EVPN NLRI originated by a VTEP.
       - Route-Target-Constraint (RTC): only route-prefixes as imported by a PE are transmitted.
    - Route-Distinguisher (RD):
+      - RFC-4364
       - Definitional
          - Used to distinguish the distinct VPN routes of separate tenants
             - That is, ensure that all EVPN routes are uniquely identified
@@ -377,6 +537,7 @@
             - Type-2: value is 4-byte ASN plus 2-byte administratively assigned numbering
          - RD type-1 is employed by Arista' EOS
       - Characteristics/benefits:
+         - Prepended in order to support IPAM separation across VRFs.
          - Reduced convergence time
             - Multiple copies of an EVPN route are maintained within the BGP table. These copies are each unique, even if they have an identical NEXT_HOP, because of the unique RD value on the originating VTEP
             - If one of these EVPN routes is withdrawn, the other copy originated from a different VTEP is already in the BGP table and ready to be promoted to the best path and inserted into the RIB
@@ -410,7 +571,7 @@
         - After the preceding process, the peer VTEP leaf's can create an ingress replication (IR/HER) flood-list to 'Leaf1' to guide the forwarding of BUM packets. Similarly, 'Leaf1' also creates an IR/HER flood-list to its VTEP peers.
       - VTEPs transmit Type-2 routes to learn MAC addresses through EVPN (vice the data plane).
       - Furthermore, EVPN Type-2 routes can advertise BOTH host MAC addresses AND host routes because Type-2 routes can also carry host IP addresses with 32-bit masks. Host route advertisement enables hosts on different network segments to communicate with each other in a distributed gateway scenario. Of course, VTEPs need to advertise IP routes of connected hosts to each other.
-      - Network Segment Route Advertisement: The process of advertising network segment routes is similar to that of advertising host routes.  The difference is that network segment routes are advertised through Type-5 routes, whereas Type-2 routes can ONLY be used to advertise 32-bit or 128-bit host routes (type-5 routes can also be used to advertise 32-bit or 128-bit host routes).
+      - Network Segment Route Advertisement: The process of advertising network segment routes is similar to that of advertising host routes. The difference is that network segment routes are advertised through Type-5 routes, whereas Type-2 routes can ONLY be used to advertise 32-bit or 128-bit host routes (type-5 routes can also be used to advertise 32-bit or 128-bit host routes).
       - A VXLAN gateway can advertise network segment routes, but only if the attached network segments are unique across the entire network.
    - How Packet Forwarding works on a BGP-EVPN Network
       - Intra-subnet packet forwarding is acomplished using L2/VXLAN gateways (above process).
@@ -468,11 +629,25 @@
 - fabric: Effectively, L3LS-EVPN (leaf's, spines, superspines)
    - Outside of the fabric are the connected-endpoints (e.g., servers, storage, firewalls, exernal north/south routers)
    - In-fabric point-to-points (i.e., uplinks) must have IPv4 assignment (typically /31).
-- flap / flapping (port / link flapping, interface flapping): alternating between up and down states
+- flap / flapping (port / link flapping, interface flapping):
+   - Change in connection state (alternating between up and down)
+   - First or earlier diagnosis activity, invariably, is to check physical/layer-1
+   - CLI: ```errdisable flap-setting cause link-flap [...]``` ; ```errdisable detect cause link-flap```
 - flood / flooding
-   - Also see: ARP, BUM, BD
+   - Also see: ARP, BUM, BD, error-disabled
    - Definition: proactively learn host/MAC endpoint mapping information and location.
    - Unless the MP-BGP-EVPN-control-plane is employed, then this learning activity is entirely data plane driven.
+- flow control (FC)
+   - PFC (Priority-Based Flow Control): uses a new control packet defined by 802.1Qbb (not compatible with 802.3x flow control)
+      - PFC and FC are mutually exclusive
+      - Also see DCBX
+   - As applicable to both management and ethernet ports
+   - Used to delay packet transmission when [receive' side] buffer(s) is(are) full.
+      - Recieve' side port transmits a pause frame.
+      - A delay period is specified (TBD)
+   - On, Off and "desired"
+      - Desired is an auto-negotiate function (Ethernet ports cannot be set to 'desired' mode).
+      - Management ports are in 'desired' mode by default, along with "off" (TBD)
 - gNMI (gRPC network management interface)
 - GNS3 (open source graphical network simulator): gns3.com
 - GRE: generic routing encapsulation (tunneling) ... NVGRE (network virtualization a la GRE)
@@ -491,7 +666,8 @@
    - Flood-list can be either manually maintained via static entries or dynamically populated via the EVPN control-plane.
    - An ingress VTEP (AKA, source VTEP) distributes BUM frames via unicast transmission to each flood-list' peer.
    - N-1 retransmissions of each BUM frame within the EVI (where 'N' is the number of EVI' VTEP peers).
-- ICL (inter-chassis link)
+- ICL (inter-chassis link); IPL (inter-peer link)
+   - See: MLAG for expanded detail
    - between MLAG peers
    - Typically a physical cable
    - iBGP protocol traditionally employed
@@ -509,7 +685,8 @@
       - The drawback being inaccessibility.
    - A terminal server commonly provides access to switches.
       - A terminal server is a router with multiple low speed asynchronous ports physically connected to other devices.
-- IP broadcast address versus IP network address (along with subnet mask)
+- IP aliasing: assign more than one IP to an interface. Sometimes called secondary IP(s)
+- IP broadcast address versus IP network address (along with subnet-mask)
    - Not to be confused with BD
    - Takeaways:
       - In every network, the first and the last IP addresses are not assigned to any host. The first IP address is the network address and the last IP address is the broadcast address.
@@ -520,26 +697,30 @@
          - Actual hosts/nodes/devices are then assigned numbers exclusively between the network and broadcast addresses.
    - subnet:
       - Subnetting divides a network into several contiguous network groups, and each group is known as a subnet.
-      - A subnet mask is used to determine which portion is network and which portion is host-space, given a full IP-ADDR.
-      - Set bits (i.e., '1') in the subnet mask denote the network-space portion.
+      - A subnet-mask is used to determine which portion is network and which portion is host-space, given a full IP-ADDR.
+      - Set bits (i.e., '1') in the subnet-mask denote the network-space portion.
+      - A subnet is assigned a non-overlapping IP range (public/private NAT'ing notwithstanding)
+      - A router connects multiple subnets, forwarding [inbound] packets to the assigned subnet whose address range includes the destination address.
    - network address:
       - AKA 'network-ID'
       - Reserved as all 0's of the host-space portion
    - broadcast address:
       - Every network has one-and-only-one/unique broadcast address
-      - Routers use the broadcast address to send data to a host device connected to the network (TBD: one host? all hosts?)
-      - There is only one source when broadcasting (presume that is the router's address?) TBD
+      - Routers use the broadcast address to send data to a host device connected to the network
+      - There is only one source when broadcasting (presume that is the router's address)
       - A broadcast address is formulated by setting all bits (i.e., 1's) in the host-space portion
          - I.e., reserved as all 1's of the host-space portion
-   - Exemplary: Using IP address 192.168.2.4 and subnet mask of 255.255.255.240 ('er, /28-network or, conversely, /4-host)
+   - Exemplary: Using IP address 192.168.2.4 and subnet-mask of 255.255.255.240 ('er, /28-network or, conversely, /4-host)
       - Written as: 192.168.2.4/28
       - IP-Address = 192.168.2.4 =      1100 0000 1010 1000 0000 0010 0000 0100
       - Subnet mask = 255.255.255.240 = 1111 1111 1111 1111 1111 1111 1111 0000
       - We can connect 14 devices (192.168.2.1 - 192.168.2.14) (bits 0001 through 1110, inclusive)
       - The broadcast IP address is 192.168.2.15  (all 1's for the last four bits)
       - Conversely, the network address is 192.168.2.0 (all 0's for the last four bits)
+   - Wildcard masks differ from subnet masks in that the bits are inverted.
+      - subnet 255.255.255.0 is equivalent to /24, while wildcard 0.0.0.15 is equivalent to /28
 - IP Peering versus IP Transit ... and L3-edge
-   - IP peering is a mutual exchange of data between two ISPs such that the data volume exchanged is ~equal.  The arrangement is settlement-free, meaning the respective ISPs do not charge each other.
+   - IP peering is a mutual exchange of data between two ISPs such that the data volume exchanged is ~equal. The arrangement is settlement-free, meaning the respective ISPs do not charge each other.
    - IP transit, on the other hand, is defined such that one entity pays another to transit the upstream network.
    - In either case, mechanically, there is a designated IP Peering Leaf to connect to an edge router(s).
       - Apparently an edge router is a separate physical device/switch.
@@ -556,7 +737,7 @@
       - Private peering is a dedicated physical connection between you and your peer.
       - Private peering is intended to scale to much higher bandwidths at much low cost (as compared to public peering).
 - IP subnet (RFC-3021)
-   - "/31" is a special case detailed in RFC-3021 where networks with this type of subnet mask can assign two IP addresses as a point-to-point link.
+   - "/31" is a special case detailed in RFC-3021 where networks with this type of subnet-mask can assign two IP addresses as a point-to-point link.
       - So, this RFC exists to undo other RFC's that had their own special treatments, primarily "directed broadcast" with "-1", noting that -- in /31 -- the '1' bit actually translates to '-1' (as a signed -1 versus an unsigned '1' -- go figure).
 - IP unnumbered: https://networklessons.com/cisco/ccie-routing-switching/ip-unnumbered-explained
    - Alleviate wasting entire IP subnets on point-to-point interfaces. Instead, "borrow" the IP address from your paired side.
@@ -565,11 +746,10 @@
 - IRB (Integrated Routing and Bridging)
    - Asymmetric versus symmetric:
       - Asymmetric-IRB performs routing only on the ingress VTEP
-      - Symmetric-IRB  performs routing on both ingress and egress VTEPs
+      - Symmetric-IRB  performs routing on both ingress and egress VTEPs (preferred)
    - 'l2vpn-evpn' address family
    - VTEPs perform both routing and bridging (i.e., IRB)
    - Asymmetric IRB
-      - Not under consideration in our environment
       - EVPN is strictly an L2-VPN overlay, with inter-subnet traffic routed only at the ingress VTEP.
          - Remote ARP entries are maintained in hardware (does not scale)
       - Inter-VLAN routing occurs on the first hop (local) VTEP, followed by VXLAN bridging towards the destination using L2VNI
@@ -593,6 +773,8 @@
          - From that ingress routing operation, traffic is the routed via the L3 VPN tunnel
          - Post receiving and de-encapsulation on the egress VTEP, the packet is first routed EVPN-Hybrid-IRB-Mode1 and then bridged to the destination end point.
 - IS-IS: intermediate-system-to-intermediate-system
+- ISSU (In-Service-Software-Upgrade)
+   - Also see MLAG (as ISSU is mechanically coupled to MLAG)
 - L2LS (layer-2 leaf/spine)
    - two spine switches are paired as an MLAG domain (presented as one switch, of course)
    - all links used for forwarding
@@ -610,17 +792,26 @@
          - Remote network endpoint device configuration (IP/MAC) is not stored in the ARP table, but the local subnet default gateway device endpoint configuration is stored within ARP.
          - The ARP table can be viewed with the comamnd "show ip arp" << presume vendor neutral (?)
       - Different subnet: ... dealt with in a few ways:
-         - A static route entry on the source endpoint informs where the packet needs to be sent (in order to reach the destination network).
+         - A static-route entry on the source endpoint informs where the packet needs to be sent (in order to reach the destination network).
          - A default gateway informs the source device where to forward all non-local network traffic.
          - Routes for traffic can be dynamically learned via routing protocols.
       - The local device must add the Layer 2 headers in order to reach the destination IP address, which works a differently when traversing to a seperate subnet:
          - The destination MAC addres is set to that of the next-hop IP address.
       - The next-hop device (a router or multi-layer switch) recieves the source packet and updates the destination MAC address as ethier the destination IP device if it has access to its network, or its next-hop router or multi-layer switches MAC address.
+- L3 switching: A term denoting L2-over-L3
+   - Typically comprised of a control plane (route table) and a data plane (L2 traffic)
+   - data plane (AKA, forwarding plane)
+   - Two packet forwarding modes:
+      - Store and forward: the switch accumulates entire packets before forwarding them
+      - Cut through: the switch begins forwarding frames before their reception is complete (risk versus latency)
 - LACP: link aggregation control procotol (IEEE 802.1ax and 802.3ad)
    - Also see: LAG, MLAG, port-channel
-   - Reminder: this is a protocol, consisting of LACPDUs (LACP data units), negotiation, system priority, actor-versus-partner, port selection (e.g., active), resulting in establishment of "port-channel"
+   - Definitional
       - LACP is a protocol for auto-configuring and maintaining LAG
+      - LACP consists of LACPDUs (LACP protocol data units), negotiation, system priority, actor-versus-partner, port selection (e.g., active), resulting in establishment of "port-channel"
       - Ports that are LACP enabled can automatically configure themselves into trunk groups (without any manual configuration).
+      - static and dynamic modes (dynamic mode further delineates "active" and "passive")
+      - Terminology caveat: local interface is "actor" and remote interface is "partner"
    - LACP Port Priority
       - Each port that is configured to use LACP has an LACP port priority (default 32768).  
       - Configure a value between 1 and 65535. LACP uses the port priority with the port number to form the port identifier.
@@ -628,9 +819,15 @@
       - A higher port priority value means a lower priority for LACP.
       - You can configure the port priority so that specified ports have a lower priority for LACP and are most likely to be chosen as active links, rather than hot-standby links.
    - LACP fallback mode (individual versus static):
+      - Definitional: Active LACP interface maintains the LAG without receiving PDUs for specified timer. Fallback on expiry is to "static" mode.
       - Static: The port-channel maintains one active port while in fallback mode and all other member-ports are in standby mode until a LACP PDU is received by the port-channel. Only the active port sends or receives data.
-      - Individual: All member ports act as individual switch ports while in fallback mode.  Individual port configuration (vice port-channel configuration) is active while the port-channel is in fallback mode, with the exception of ACLs.  Once an LACP PDU is received by a member of the port-channel, all ports revert to normal port-channel operation.
-      - PDU (protocol data unit)
+      - Individual: All member ports act as individual switch ports while in fallback mode. Individual port configuration (vice port-channel configuration) is active while the port-channel is in fallback mode, with the exception of ACLs. Once an LACP PDU is received by a member of the port-channel, all ports revert to normal port-channel operation.
+   - LACP system-priority: applicable to fallback mode, identifies the master switch (lower number is greater).
+   - LACP port-priority: applicable to fallback mode, noting that a lower number is greater than higher number.
+      - Priority numbers range from 0 to 65535. The default is 32768. (higher numbered ports go to stand-by mode).
+   - load balance: stream units must follow the same path (for proper sequence)
+      - The fields (up to L4) can be specified/configured.
+   - An LACP interface without fallback enabled does not form a LAG until it receives PDUs from it peer.
 - LAG (link aggregation group)
    - Definitional
       - LAG refers to the initial technology to realize link bundling and load balancing without any protocol involved.
@@ -650,9 +847,16 @@
        - The Link Tracking mechanism shuts down links attached to the Ethernet Segment if all links to the spine are down.
    - CLI: link tracking group command is used to configure a link-state-group on a switch.
 - LLDP: link layer discovery protocol
-   - Used by devices for advertising their identity, capabilities, and neighbors on a local area network as a way to automatically learn about ADJACENT devices (LLDP only works between devices that are connected at layer two (i.e. on the same physical segment and in a common VLAN).
-   - Important for VMWare et al as switches are able to learn details about connected devices such as virtual machines/hypervisors, as well as neighboring switches. For example, when VM instances are created on compute nodes, then the Ethernet trunk port between the leaf switch and compute node can be automatically configured to allow the required VLANs.
    - Not to be confused with MPLS' LDP (label distribution protocol)
+   - Only works between devices that are connected at layer two (i.e. on the same physical segment and in a common VLAN.
+   - Discover only one device per port
+   - Enabled on all interfaces by default
+   - Advertise identity, capabilities and neighbors
+   - Learn ADJACENT devices, higher layer reachability and connection endpoint information
+      - Stored in an SNMP "MIB"
+   - Important for VMWare et al as switches are able to learn details about connected devices such as virtual machines/hypervisors, as well as neighboring switches. For example, when VM instances are created on compute nodes, then the Ethernet trunk port between the leaf switch and compute node can be automatically configured to allow the required VLANs.
+   - Not supported on virtual interfaces (a CLI command exists to specify a VRF instance)
+   - LLDP Data Unit (LLDPDU): header then TLV
 - LFS (Link Fault Signaling) ... inherent in the 10/40/100G Ethernet standard
     - Behaves much like BFD but at a lower layer (BDF is not needed on links with LFS)
     - Lives below the MAC layer in a sublayer called the Reconciliation Sublayer or RS, reporting a fault status as local or remote
@@ -660,10 +864,11 @@
 - loopback interface
    - Also see: loopback0, loopback1
       - Regarding loopback0 and loopback1: This glossary content shall describe conventional usage, as vendor and/or NetDevOps assignments can vary.
+   - Definitional: Virtual interface devoid of physical port counterpart
    - Remove this from the public square: "127.0.0.1"
    - Loopback IPs have no correlation to physical (hence, loopback)
    - Loopback IFs can never go down (outside of software/c2, etc)
-   - Assign an IP to a network device, using /32 subnet mask as a convention to avoid wasting IP space
+   - Assign an IP to a network device, using /32 subnet-mask as a convention to avoid wasting IP space
 - loopback0 (lo0:)
    - IP that uniquely identifies the device (switch) to neighbors (network peers).
    - AKA "primary_ip"
@@ -680,7 +885,7 @@
    - EVPN routing rule:
       - If ethernet source MAC of original/naked frame is PHYSICAL then after encapsulation, outer Source IP will also be Primary IP of VXLAN loopback interface. If ethernet source MAC of original/naked frame is VIRTUAL, then after encapsulation outer Source IP will be Virtual VTEP IP (secondary loopback IP).
 - loopback interface pool
-   - To advertise a subnetwork route as internal rather than a Type-5 route for an redistributed static route using OSPF.
+   - To advertise a subnetwork route as internal rather than a Type-5 route for an redistributed static-route using OSPF.
    - In this scenario, suggest configuration of subnetwork routes on the loopback interface:
    ```
    [root]# edit interfaces lo0 unit 0 family inet
@@ -688,10 +893,33 @@
    [root]# set address 193.16.0.1/24 (noting 193 is not 172, which is another reserved private ip space)
    ```
 - LSA: link-state advisement ... contains info about each link and directly connected neighbor routers.
+- MAC
+   - Four MAC address types (byte-1/bit-8 is the Individual/Group bit) identify the LAN interface scope:
+      - unicast: represents a single interface (I/G bit is 0)
+      - broadcast: represents all interfaces (ALL F's)
+      - multicast: represents a subset of all interfaces (I/G bit is 1)
+      - reserved: assigned to nodes that have no configured MAC address (ALL 0's)
+- MAC routing table
+   - Also see: port-security::MAC, routed-port, switchport
+   - Switch (as in the verb) L2 frames between VLANs' ports.
+   - Static entry
+      - Comprised of: MAC address, VLAN and a list of L2 IFs/ports (Ethernet or port channel)
+      - Supports three types: unicast drop, unicast and multicast.
+         - A [unicast] drop entry does not include a port (unicast MAC and VLAN)
+         - A unicast entry includes one port
+         - A multicast entry includes at least one port
+      - Exemplary CLI: ```mac address-table static 0012.3694.03ec vlan 3 interface Ethernet 7```
+   - Dynamic entry
+      - Receipt of packet whereby the source MAC is not-found in the existing table.
+      - Record source MAC, IF of receipt, and VLAN (as mapped to the IF-of-receipt)
+      - AKA, "learning mode", can be turned off (e.g., via CLI)
+      - age-off: default is 5 minutes
+         - static entries are not aged off (verified by EOS manual)
+   - CLI: ```show mac address-table mlag-peer [ENTRY_TYPE][MAC_ADDR][INTF_1 ... INTF_N][VLANS]```
 - MAGP (Multi-active gateway protocol): aims to solve the default gateway problem when a host is connected to a set of switches via MLAG.
    - Also see: VARP
 - MLAG/MCLAG: multi-chassis link aggregation
-   - Also see: VARP (Active/Active FRHP used in conjunction with MLAG)
+   - Also see: ISSU, VARP (Active/Active FRHP used in conjunction with MLAG)
    - Definitional
       - An MLAG domain consists of two paired leaf switches with a connecting IPL (inter-peer control link)
       - MLAG is a way of making two different physical switches behave as a single logical unit (that is, to a connected-endpoint). 
@@ -699,8 +927,12 @@
       - Interfaces on connected_endpoints participate in a distributed port-channel
          - Appear as an ordinary LAG (as in, one chassis)
    - IPL (inter-peer link)
-      - AKA ICL (interchassis control link) / protection link (ICL-PL)
-      - Traditionally a physical cable, although L3LS-EVPN may opt to use the underlay for such purposes.
+      - AKA ICL (interchassis-control-link) / protection link (ICL-PL)
+      - SVI is a normal port-channel (with 'active' LACP)
+         - Noting that MLAG' functioning port-channels must be configured with identical port channel numbers
+         - Local SVIs have their own local IPAM
+         - CLI: ```local-interface``` assigns a VLAN interface for MLAG peer comms use. This VLAN interface (typically 4094) is used for both directions of communication between MLAG peers.
+      - Traditionally a physical cable, although L3LS-EVPN may opt to use the underlay for failover traffic flow purposes (the SVI typically mapped to VLAN 4093).
       - Traditionally employing iBGP
          - iBGP peering ensures reachability to remote VTEPs and uplink spines through the MLAG peer should direct northbound connectivity be lost.
       - Carries control messages (steady state) or data packages in failure scenarios.
@@ -724,10 +956,12 @@
          - CLI: vxlan virtual-router encapsulation mac-address mlag-system-id
          - MLAG System ID is the value for EvpnRouterMac Extended Community: Type-2 (MAC-IP), Type-5 (IP-Prefix).
          - At which point, both MLAG peers can locally forward any VXLAN routed packets destined to dual-connected workloads.
-   - MLAG Virtual System-MAC
+   - MLAG domain ID: string configured in each peer switch, used to identify their mutual connected_endpoints
+   - MLAG Virtual System-MAC (AKA MSI: MLAG System ID)
+      - Embedded into in STP PDUs and LACP PDUs
       - A pair of MLAG switches use a single virtual system MAC for L2 protocols (such as LACP) operating on the MLAG ports.
       - The virtual system MAC also serves as the STP bridge ID.
-      - The virtual system MAC is automatically computed based on the MLAG Virtual-IP (VIP) name, but can be manually set using the command system-mac.
+      - The virtual system MAC is automatically computed based on the MLAG Virtual-IP (VIP) name, but can be manually set using the command ```system-mac```.
       - MLAG relies on systems to have the same virtual system MAC. Therefore, if a system MAC mismatch is detected, the slave shuts down its interfaces.
    - MLAG CAVEATS:
       - The route-prefix associated with the MLAG peering is not advertised through any routing process, making it link-local in nature
@@ -765,13 +999,16 @@
    - MSDP (multicast source discovery protocol): peering between ISPs
 - MSS (Arista' macro segmentation service): firewall
 - MTU, L2-MTU etc
+   - Most IP over Ethernet implementations use Ethernet V2 frame format, which specifies an MTU of 1500.
    - L2-MTU applies to VLAN and MPLS headers while MTU applies to all remaining IP payload
    - ACTUAL MTU (read-only setting)
    - Reminder that MTU is a multi-party affair.
-   - MTU size:
+   - MTU size (in bytes):
       - On L2, set to max (what ever that is, say 9K/9216/9214) as a general practice.
-      - On L3 (IP-VLAN), set to what's in use / what's necessary (not max nor "jumbo").
-      - Jumbo is > 1500
+      - On L3 (IP-VLAN), minimum size of 68 to a maximum size of 9214 bytes. The default size is 1500.
+      - Jumbo is deemed > 1500
+      - MTU size refers to maximum size of encapsulated packet (within a frame)
+         - Frame size is calculated as: <mtu-size> + 6 (source MAC) + 6 (dst MAC) + 4 (VLAN tag) + 2 (ether type) + 4 (crc)
 - NAD: network attached device (e.g., server, router, firewall, storage/san, ... akin to Arista connected_endpoint_key)
 - NLRI (network-layer reachability information): see AF, BGP
    - RFC-8950: Advertising IPv4 Network Layer Reachability Information (NLRI) with an IPv6 Next Hop
@@ -784,6 +1021,7 @@
 - NVO (network virtualization overlay)
    - An umbrella term for various overlay techniques.
    - See: https://datatracker.ietf.org/wg/nvo3/about/
+- null0 (interface): equivalent to /dev/null
 - OOBM (out-of-band management)
    - Also see: M2/C2 (monitoring/metrics and command/control)
    - OOBM is employed on a separate endpoint (SVI) for the express purpose of direct control of a switch
@@ -823,6 +1061,7 @@
    - The core principles on which OTV operates are the use of a control protocol to advertise MAC address reachability information 
       - instead of using data plane learning and packet switching of IP encapsulated Layer 2 traffic
       - instead of using circuit switching for data forwarding.
+- PDU (protocol data unit)
 - P2P (point-to-point)
    - Although this term might be construed as "peer to peer" in a non-network-fabric context, the significance of P2P as applied to the network fabric is that of "network device to network device", such as leaf-to-spine, spine-to-superspine, and vice-versa
    - Links to connected-endpoints may be point-to-point, but typically MLAG/ESI-LAG is employed
@@ -847,10 +1086,48 @@
 - PIM (protocol independent multicast)
 - PINS (P4 Integrated Network Stack)
 - POD (point of delivery): Effectively a partioning of the L3LS-EVPN fabric to a subset of interconnected leaf's/spine's and, maybe, a super-spine.
+- Policy map (AKA traffic management):
+   - Also see QoS
+   - "shaping" is one of modifying packets
+   - policy maps: control plane, qos (quality of service) and pbr (policy based routing)
+      - eponymous: each policy map is named after a person (because it's there)
+      - A policy map consists of "classes", for which contain a class map and associated resolution commands
+         - Three class map types: control plane, qos or pbr
+         - A class map specifies packet characteristics (intent is to identify a data stream)
+         - Traffic resolution commands are the handling methods, which are specific to the ```class type```. First match applies the handling [vice all matches].
+   - control plane policy (only one per switch, and is not removable)
+      - ```copp-system-policy```
+      - Consists of preconfigured classes that contain a [singular] static class map and accompanying resolution commands.
+      - Static class maps are provided by the switch and cannot be modified or deleted.
+         - The naming convention of static class maps is ```copp-system-<name>```
+         - Static class maps have pre-defined internal conditions (not based on ACLs), order-agnostic.
+         - Resolution commands define minimum (bandwidth) and maximum (shape) transmission rates.
+      - Allowed modifications to the policy:
+         - Add classes consisting of an eponymous dynamic class map and traffic resolution commands.
+         - Dynamic class maps are user created with full CRUD capability.  One IPv4 ACL (per class map), whereby the resolution commands override the preconfigured commands.
+   - QOS policies
+      - User defined (there are no preconfigured qos policy maps) and the default is, effectively, "nothing applied"
+      - Applied to IFs through CLI. First match applies the handling [vice all matches]
+      - Composed of [1..n] dynamic classes, user maintained by CRUD.
+      - One IPv4 ACL (per class map)
+      - QoS traffic resolution commands perform one of the following (emphasis: "one"):
+         - Set the layer 2 CoS field
+         - Set the DSCP value in the ToS byte
+         - Specify a traffic class queue.
+      - Every QOS policy map must specify ```class-default``` as the last class, such that all non-IP traffic is matched.
+         - Apparently, the match condition is not editable.
+         - Its traffic resolution commands, otherwise unspecified, are maintained via CLI.
+   - PBR policies (Policy Based Routing)
+      - nexthop
+      - Applicable to L3 IF
+      - Overriding the routing table.
+      - A PBR' policy map references [1..n] ACLs, defining the nexthop for a specified condition-clause(s)
+      - Each class contains an eponymous class map
+   - CLI: ```class-map type [control-plane|qos|pbr]```, ```match ....```, ```policy-map type [control-plane|qos|pbr] <name>```, ```class <name>```, ```bandwidth pps <n>```, ```shape pps <n>```, ```set [cos|dscp|traffic class] <n>```, ```service-policy ....```, ```set nexthop <IP>``` << Multiple IPs are possible, which then becomes an ECMP group
 - Port-channel interface:
    - See also: 802.1ad, channel-group, EtherChannel, virtual port-channel (vPC), trunk-port, LACP, LAG
    - Definitional
-      - A virtual interface that serves a corresponding channel-group
+      - A virtual interface that serves a corresponding channel-group (a collection of Ethernet IFs)
       - Configurable as L2 switchable interfaces (e.g., EtherChannel), L3 routable interfaces, or VLAN members.
    - Most Ethernet interface configuration options are also available to port-channel interfaces.
    - Limitation: single switch (versus vPC)
@@ -863,37 +1140,131 @@
       - Only layer2 port-channels can be used.
       - Implementations: dual-uplink-layer-2, dual-homing, fex topologies
    - Configuration changes to a port channel interface propagate to all channel-group sub-interfaces.
-- IP-prefix-list:
+- port mirroring (AKA port monitoring) // mirror == duplicate
+   - Also see TUN/TAP
+   - Mirrored ports are not routed ports (strictly switch ports).
+   - Source port is either "etherport" or "port channel" while destination port is nominally an etherport (some platforms may support port-channel for destination port).
+   - Ingress Mirroring: Received traffic is duplicated: data traffic plus L2 control PDUs. Duplication occurs prior to applying forwarding logic (packets subsequently dropped are mirrored).
+   - Egress Mirroring: XMIT is duplicated, with exceptions:
+      - Flood/multicast packets, as sent to multiple mirror ports, generate one copy (except for multi-chip devices, where source and dest ports are different chips)
+      - Dropped packets [as dropped by forwarding decisions, such as output STP state checks] are not duplicated.
+      - Packets dropped because of congestion may be duplicated.
+   - Ports configured to mirror data can simultaneously switch traffic to its primary destination while directing a copy of that traffic to analysis or test devices.
+   - The ```monitor session destination``` command" configures an Ethernet IF as the dest port of a specified port mirroring session.
+   - The ```monitor session source``` command configures the source port of a specified port mirroring session.
+- IP-prefix-list (AKA prefix-list, route-prefix):
    - Also see route-map
-   - Contains the routes that are intended to be advertised to the spine.
+   - Definitional
+      - Rules that define route-redistribution access for a specified IP space.
+      - Contains the routes that are intended to be advertised to the spine.
+   - Syntactical: name, action (deny/permit), IP-prefix and sequence number
+      - prefix may also incorporate a mask size expression (e.g., 10.1.1.0/24 ge 26 le 30)
+      - ipv4 and ipv6 are handled separately/differently
+      - ```prefix``` -- as well as ```match``` -- can be fairly complex, as well as L4' protocol or l2' MAC specific
+         - along with ASN, community, rt/rd, ...
    - Example CLI:
    ```
       ip prefix-list PL-LOOPBACKS seq 10 permit 1.1.1.0/24 eq 32
       ip prefix-list PL-LOOPBACKS seq 20 permit 2.2.2.0/24 eq 32
       ip prefix-list PL-P2P-UNDERLAY seq 10 permit 10.0.0.0/8 le 31
+      route-map MAP_1 permit
+         config-route-map-MAP_1# match ip address prefix-list PL_1
+         config-route-map-MAP_1# set community 500
+         config-route-map-MAP_1# exit
    ```
-   - PL-LOOPBACKS only matches on /32 IP-prefixes that exist within the 1.1.1.0/24 and 2.2.2.0/24 ranges.
-   - Likewise, PL-P2P-UNDERLAY only matches IP-prefixes within the 10.0.0.0/8 range, albeit using a mask of /31.
-   - These statements allow you to access ('er, "reach/reachability") the p2p' uplinks. Otherwise, IP-prefix-list(s) would be unnecessary.
+      - PL-LOOPBACKS only matches on /32 IP-prefixes that exist within the 1.1.1.0/24 and 2.2.2.0/24 ranges.
+      - Likewise, PL-P2P-UNDERLAY only matches IP-prefixes within the 10.0.0.0/8 range, albeit using a mask of /31.
+      - These statements allow you to access ('er, "reach/reachability") the p2p' uplinks. Otherwise, IP-prefix-list(s) would be unnecessary.
    - Also note that differing BGP/EVPN domains are likely to have identical IPAM.
       - Which muddies attempts at reachability across these domains to discrete p2p' uplinks (e.g., troubleshooting)
    - Reminder: The only value that must be unique across data centers is the Loopback IP address of each respective VTEP (or MLAG VTEP pairs).
 - QinQ / Q-in-Q
    - Also see: 802.1Q, VLAN
    - Definitional
+      - A multi-tier L2 VLAN network, typically composed of a service provider network (tier 1), such that each node/IF connects to a customer network (tier 2), assigned to a customer-VLAN (c-VLAN).
       - Stacked VLANs or Double VLAN tagging (Q-in-Q means VLAN tunneling, where the 'Q' stands for 802.1Q)
       - Divide a single Ethernet or port-channel interface into multiple logical L3 interfaces based on a combination of two 802.1q tags (VLAN ID) in incoming traffic.
+         - Ethernet frames allow for multiple 802.1Q tags facilitating switching within the network.
       - QinQ L3 sub-interfaces are commonly used in a PE, but they are also used to isolate traffic with a combination of two 802.1q tags between L3 peers by assigning each sub-interface to a different VRF.
       - QinQ L3 sub-interfaces are similar to regular L3 sub-interfaces, with the difference being the number of tags being used to isolate traffic.
       - Whereas L3 sub-interfaces use a single 802.1q tag (VLAN ID) in the incoming traffic, QinQ L3 sub-interfaces use a combination of outer and inner tags.
 - QoS (quality of service)
+   - Also see policy map (traffic management)
    - Protocols, both standards based and vendor provided, have incorporated implements, sophisticated to extensive in many cases, to support QoS' oriented reporting and monitoring services
+   - QoS processes apply QOS settings to traffic that flows through Ethernet ports and control planes.
+      - To include port-channels, but to exclude SVIs
+      - These processes can "shape" -- that is, modify data fields (CoS or DSCP) -- and/or assign traffic-classes for prioritized handling.
+   - Transmission queues are port-level configurable to shape traffic based on its traffic-class.
+   - Criteria: packet priority, packet content introspection, port characteristics, ACL filtering (see route-map)
+   - Packet content introspection:
+      - CoS (class of service): 3-bit priority field in Ethernet frame headers using L2' VLAN tagging.
+      - DSCP (differentiated service code point): 6-bit subfield TOS (type of service) in IP packet header.
+   - Trust mode (applicable to Ethernet and port channel IFs):
+      - CoS Trust (switched port): Derive traffic-class from inbound packet' CoS.
+      - DSCP Trust (routed port): Derive traffic-class from inbound packet' DSCP.
+      - Untrusted: Assign traffic-class using default CoS/DSCP. Packet content is ignored.
+      - CLI: ```qos trust dscp``` and ```qos trust cos``` (on or off a la "no")
+   - CoS rewrite of an outbound (tagged) packet:
+      - The CoS value is specified by the traffic-class' CoS rewrite map.
+      - CoS rewrite is disabled on all CoS trusted ports.
+   - [Arista] CoS rewrite of an inbound packet is globally enabled/disabled by default on untrusted ports and DSCP trusted ports based on whether/or-not, respectively, any port is explicitly configured in dscp trust or untrusted mode.
+   - DSCP rewrite of an outbound [tagged] packets:
+      - [Arista] DSCP rewrite is disabled by default on all ports and always disabled on DSCP trusted ports.
+   - DSCP rewrite of an inbound packet:
+      - The DSCP value is specified by the traffic-class' DSCP rewrite map.
+   - Traffic-Class:
+      - Derived from packet header content (CoS and/or DSCP), default settings (CoS and/or DSCP) and Inbound port-trust setting
+      - Packet header content is applied to a conversion map (CoS and/or DSCP), configured via CLI commands.
+    - CLI: ```qos cos <n>``` and ```qos dscp <n>``` (these set the default values); ```qos map cos ...``` and ```qos map dscp ...``` (these define traffic class map entries, along with transmit queue map variants); ```shape rate <n>```, ```priority strict```, ```qos ecn```, ```tx-queue <n>```, ```bandwidth guaranteed``` (minimum), ```bandwidth  percent```, .... 
+   - Port shaping
+      - Port-based transmission prioritization (AKA transmission schedule)
+      - Facilitated through the use of compartmented queues determined by port configuration and traffic' characterization criteria.
+        - E.G., port' specified maximum egress bandwidth, transmit-queue' maximum egress bandwidth
+      - Traffic-class' transmit queue maps: Defined for all switch-ports, separated into unicast and multicast.
+      - Transmit queue priority is determined by the transmission scheduling algorithm (mutually exclusive):
+        - Strict priority queues are serviced in the order of priority/rank
+          - A queue’s label manifests its priority. E.G., Tx-queue 0 has lowest priority.
+          - Albeit subject to each queue’s configured maximum bandwidth.
+          - Either a queue is emptied or its transmission limit is reached (before moving on).
+          - Typically carrying high priority / low-latency real-time traffic.
+        - Round robin queues are handled based on configured maximum bandwidth and relative bandwidth' time-slice percent.
+          - These queues are low priority relative to strict priority queues.
+          - These queues can be starved (due to higher priority strict priority queues).
+   - ECN (Explicit Congestion Notification)
+      - An IP/TCP extension to flag a congestion condition or early-warning thereof.
+      - Both sides must support the capability, as an ACK from the receiver triggers sender rate reduction.
+        - Packets are otherwise dropped if ECN is not supported by the receiving side (when under congestion).
+      - Only unicast can be marked, but congestion conditions are applicable beyond unicast.
+      - DiffServ field bits 6 and 7 (IP header)
+        - 00: ECN is not supported
+        - 01 and 10: ECN is supported (no detection of congestion)
+        - 11: Congestion is occurring
+      - WRED (Weighted Random Early Detection): An AQM (active queue management) algorithm that extends RED (Random Early Detection)
+         - Compare queue size against minimum and maximum size thresholds, compute situational assessment (using between or over).
+   - ACL policing
+      - Purpose: monitor ingest flow rates of traffic-classes as exceeding configured thresholds to perform defined response actions.
+        - For emphasis: This is an ingress' bandwidth control mechanism.
+        - Ingress policing is done by policing meters, marking incoming traffic, triggering actions
+      - terminal settings, policy-map settings, CIR (committed information rate), conform-burst-size
+      - LAG: work in progress, consult your model/platform for more info.
+      - Flow Mode: Single-Rate Two-Color Marker (packet-count and byte-count meters, green/red, bucket size)
+        - Configure rate and size
+      - Policy maps contain one or more policy map classes, each with different match criteria and policer.
+      - Default behavior and available policing actions are as follows:
+        - Lack of policer means no policing
+        - Conform-action (green): transmit (default)
+        - Violate-action (red): drop (default)
+      - CLI: ```policy-map```, ```class-map```, ```match <condition>```, ```police cir <n> bc <n>```
 - RADIUS (Remote Authentication Dial-In User Service) is a client-server networking protocol that runs in the application layer.
    - RADIUS Client (or Network Access Server) is a networking device (like a VPN concentrator, router, switch) used to authenticate users.
    - RADIUS Server is a background process that runs on a UNIX or Windows server. It maintains user profiles in a central database.
    - When a user tries to connect to a RADIUS Client, the Client sends requests to the RADIUS Server.
       - The RADIUS Server authenticates and authorizes the user.
    - All servers have AAA capabilities (Authentication, Authorization, and Accounting).
+- RAIL (Rapid Automated Indication of Link-Loss)
+   - Also see: link state group etc.
+   - RAIL settings are configured in server-failure configuration mode.
+   - Function: Proxied connected endpoints' IP/MAC are effectively blacklisted.
 - RIB (routing information base), ribd (daemon, presume)
    - Also see: BGP
 - RIOT: Routing In and Out of Tunnels (associated with VXLAN)
@@ -910,30 +1281,56 @@
       - NetBox considers these RFCs as privately-managed RIR(s)
    - Managed content incorporates ASNs as well as IPs
 - route-map (AKA BGP-EVPN/L2VPN' route-map)
+   - Also see: BGP, IP-prefix-list
    - Definitional
-      - Configure filtering criteria by defining a set of permit and/or deny conditional match-statements.
-      - Set BGP attributes and metrics for the routes that match the defined filter criteria.
+      - Configure filtering criteria by defining a set of permit and/or deny conditional match-statements (AKA, ACLs [below])
+         - Rules that control the redistribution of IP routes into a "protocol routing domain" on the basis of such criteria as route metrics, ACLs, nexthop's, and route tags.
+      - Route-maps can also alter parameters of routes as they are redistributed (AKA, "shaping"): Set BGP attributes and metrics for the routes that match the defined filter criteria.
       - References the IP-prefix-list containing routes that are intended to be BGP-advertised.
       - Applied to neighbors' list using the peer-group in the out direction.
       - Alternatively stated: Apply configured attributes (PA) as well as prefixes' filtration.
    - Connected routes are redistributed to the neighbors to advertise applicable (local) subnets and interfaces.
    - For neighbor commands in the address-family 'l2vpn-evpn' context, an inbound or outbound route-map can be used to set the route-map policy to be applied on routes received from BGP neighbors.
    - An outbound route-map can be used to set the route-map policy to apply on the routes to be advertised to BGP neighbors.
+   - Route-maps are composed of "route-map clauses" (these comprise the ACL [below]).
+      - Route-map clause: name, sequence, filter-type (permit/deny), match <condition>'s and set's/continue.
+         - 'continue' is a construct that specifies [yet another] clause statement (by it's sequence number).
+      - Passing a "permit" is considered "redistribution" (whereas 'deny' is deemed "reject")
+      - Exemplary CLI:: ```route-map MAP_1 permit 10 match as 10 set local-preference 100``` # note that 'as' is ASN
+   - A static-route is defined whereby a dynamically learned route is not possible to achieve.
+      - Considered a "connected" route, available for redistribution into routing domains [provided by dynamic routing].
+      - By default, the administrative distance assigned to static-routes is 1.  A higher administrative distance allows for override by learned dynamic routing.
+   - A route-tag is a 32-bit number attached to a route. Route-maps use route-tags to filter routes.
+      - Static-routes have a default tag value of 0.
+   - Default-route: The forwarding-rule that takes effect when no other route is configured [or matched]
+      - The IPv4 destination prefix is 0.0.0.0/0 and the nexthop is the default gateway.
+   - A dynamic route is established by a dynamic routing protocol (e.g., BGP)
+      - Maintain (as in, continually adjust) a route-table of topology/traffic "nexthop" pathways (learned L2' ARP)
+   - The gateway of last resort is the default-route.
+   - ACL
+      - Also see: ipv4/ipv6 rule set, mac rules
+      - Besides security (at the port level), ACLs are used (by route-maps) to select "redistribution" routes.
+      - An ACL is a list of rules that control the inbound flow of packets into Ethernet IFs, port-channel IFs or the switch control plane (via corresponding assignment command)
+      - Standard and/or default ACLs applied unless otherwise overridden.
+      - Wide variety of filtering criteria including IP, MAC, L4 ports, with include/exclude options.
+      - ```permit``` and ```deny``` commands, ordered by ```sequence-number```
 - routed-port (L3)
    - Also see: switchport, VRF
    - Definitional
-      - In effect, use IP versus MAC to route
-      - Switchport configured to be an L3 routed port (i.e., behave like a router interface).
+      - In effect, use IP versus MAC to route. That is, behave like a router (versus a switch).
+      - A routed-port is an Ethernet or port-channel interface configured as an L3' IF.
+         - Port is assigned a non-overlapping IP from a subnet range.
+      - L3' network layer packets travel between interconnected subnets (same or different router, further extended by ASN)
+      - Routed ports do not bridge frames (see VLAN) and are not -- of themselves -- members of a VLAN. That said, the interface configured for a routed-port is allocated to an internal VLAN assigned an unused VLAN-ID.
+      - IP routing is typically disabled by default (conversely, a port is placed in switch mode by default)
    - Sample CLI configuration: ```no switchport interface``` or ```no switchport force```
       - Then assign the port' IP.
       - While here: ```ip routing vrf default``` # enable/turn-on the global routing table
-- Route Reflector:
-   - Also see: iBGP
-   - The iBGP full-mesh requirement influences the use of route reflectors to simplify configuration.
-      - The formula to compute the number of sessions required for a full mesh is v * (v - 1)/2, where v is the number of BGP-enabled devices.
-      - Obviously, the full-mesh model does not scale well.
-   - Using a route reflector, routers are grouped into clusters, employing numeric identifiers unique to the autonomous system (AS).
-      - Within the cluster, configure a BGP session from a single router (the route reflector) to each internal peer.
+   - Routed LAG: A LAG created from a routed-port, noting that IPAM configuration is not propagated to the LAG.
+- Route Redistribution
+   - The advertisement, into a dynamic routing protocol’s routing domain, of connected (static) routes or dynamic routes as established by enabled routing protocol.
+   - By default, a router only advertises routes in a routing domain pertaining to the protocol that defined the domain.
+   - Route redistribution commands specify the scope of the redistribution action, along with any filtering by applying a route-map, which defines the subset of routes to be advertised.
 - router-ID (AKA BGP router-ID)
    - Also see: loopback0
    - Must be unique within a BGP speakers respective AS (that is, should not conflict with BGP peers).
@@ -946,12 +1343,18 @@
 - RP anycast: Rendezvous Point (RP)
    - Configure a single IP on multiple routers and advertise in the IGP (e.g., iBGP).
    - Multiple RPs with the same IP effect routing to the closest RP based on the unicast routing table.
-- RPF: Multicast Reverse Path Forwarding
+- mRPF: Multicast Reverse Path Forwarding
    - Tool to reduce forwarding of IP packets that might be spoofing.
    - A unicast RPF check performs a forwarding table lookup on an IP packets source address, and checks the incoming interface.
    - Determine whether the packet is arriving from a path that the sender would use to reach the destination.
    - If the packet is from a valid path, the router or switch forwards the packet to the destination address.
    - If it is not from a valid path, the router or switch discards the packet
+- uRPF (Unicast Reverse Path Forwarding)
+   - Drop packets for which the routing table does not contain a valid path to the source' IP.
+   - The routing table must support IP verification (both source' IP and dest' IP)
+   - Strict mode: Additionally verify the routing table path for the return packet matches the IF of the incoming packet.
+   - Loose mode: The ingress IF of the inbound packet is not taken into consideration.
+   - CLI: ```interface vlan 17``` -- and then -- ```ip verify unicast source reachable-via any```
 - SBD (source based routing)
    - Mechanism to dynamically create per-subnet default routes.
    - Gateways must be defined for each subnet.
@@ -978,12 +1381,14 @@
       - QSFP connectors are still small and hot-pluggable, and they still support Ethernet and fiber optics.
    - QSFP-DD: module/cage-connector system, similar to current QSFP with additional row of contacts providing for an 8-lane interface.
       - In development by the QSFP-DD MSA as a key part of the industrys effort to enable high-speed solutions.
+   - SFP is nominally 10g while QSFP is 40g or 4x10g
+   - CLI: ```transceiver qsfp default-mode``` # set speed when not otherwise explicitly set
 - Single-active multi-homing redundancy:
    - Applicable to ethernet-sgement (ES)
    - Such that only a single leaf among a group of leafs attached to a host is allowed to forward to/from on a given VLAN
 - spine (and super-spine by extension)
    - Switch used to connect leaf nodes, sometimes such that spine' uplink is a super-spine.
-   - Also see EVPN, iBGP and Route Reflection
+   - Also see EVPN, iBGP and BGP route-reflection
    - Provide inter-leaf IP underlay pathways
 - Split-horizon:
    - A learned route is not rebroadcast on the IF where it was learned
@@ -999,22 +1404,87 @@
       - Storm control multicast: Ditto (as applicable to multicast traffic)
    - Broadcast and multicast storm control are independent features.
    - Threshold is a percentage of the total available port bandwidth and is configurable on each interface for each transmission mode.
-- STP (spanning-tree protocol):
-   - L2 network architecture / protocol used to prevent looping within a topology.
+- STP (spanning tree protocol, 802.1D)
+   - Definitional: L2' network protocol to ensure a loop-free topology for any bridged Ethernet LAN.
+      - One STP instance for the entire network (both MST and PVST modify this arrangement/constraint in differing ways)
+   - Purpose: prevent bridging loops in L2 Ethernet' networks whereby only one active path exists between any two "stations".
+      - Incorporate spare links as automatic backup paths in the case where an active link fails, without incurring a feedback loop.
+      - Loops are removed by blocking selected [and redundant] ports that connect bridges to network segments.
+      - High cost ports are blocked in deference to lower cost ports (speed, other criteria).
+      - Quote for emphasis: "Disabling spanning-tree is dangerous."
+   - Variations: MST (multiple spanning tree), RSTP (rapid spanning tree), Rapid-PVST (Rapid-per VLAN spanning tree)
+      - Some interoperability of these variants as stood up on a fabric is possible, to include specialized BPDU message exchange.
       - STP and RSTP do not segregate switch ports by VLAN
-      - For VLAN, the notion is one STP instance per VLAN -- CISCO came up with Per-VLAN Spanning Tree (PVST), and then MSTP (below)
-   - Reminder: "Disabling spanning-tree is dangerous."
+      - For VLAN, the notion is one STP instance per VLAN -- CISCO came up with Per-VLAN Spanning Tree (PVST), and then MSTP
+   - Bridge (root and designated)
+      - The root bridge is the center of the STP topology.
+      - A spanning tree instance has one root bridge (determined by lowest bridge ID).
+      - Path calculations are based on each network component’s distance from the root bridge.
+      - All other network bridges calculate paths to the Root Bridge when selecting spanning tree links.
+      - Each switch is assigned a unique Bridge ID number for each instance.
+      - All switches collectively elect the Root Bridge by comparing Bridge IDs.  The root bridge is the switch with the lowest Bridge ID.
+      - Bridge-ID: 8 bytes (most significant to least significant):
+         - Port priority (four bits)
+         - Instance number (12 bits): VLAN number (Rapid-PVST) / instance number (MST) / 0 (RST)
+         - Switch' MAC (six bytes)
+      - Designated bridge: Per segment, the switch providing the shortest path to the root bridge. A switch can be a designated bridge for multiple segments.
+      - Bridge Timers: hello-time ("bridge assurance"), forward-time (technically, learning cut-off), max-age and max-hop
+         - Recomputational topology actions occur on timeout
+   - Port related
+      - Designated ports: alternate and backup
+      - Port activity states: forwarding, discarding (AKA blocked) and learning (transitioning to forwarding).
+      - Port type: normal (unspecified), network (switch, bridge) and edge (connected-endpoint, can not loop by definition / always forwarding)
+      - Link type: p2p (full-duplex) or shared (half-duplex, and no fast state transition is allowed)
+      - port priority: used for loop resolution (lower/lowest assigned forwarding mode/state). Valid port-priority numbers are multiples of 16 between 0 and 240; the default is 128.
+      - Rapid convergence as relating to port role:
+         - PortFast: Allow port to skip convergence (learning state) before entering the forwarding state (not recommended for peer/bridge connection: potential for loop)
+         - Port Type and Link Type (above): Designates ports for rapid transitions to the forwarding state.
+         - Root Guard: Ensures that a port will not become the root port.
+         - Loop Guard: Prevents loops resulting from unidirectional failure of links.
+         - Bridge Assurance: Prevents loops caused by unidirectional links or a malfunctioning switch.
+   - BPDU (Bridge Protocol Data Unit)
+      - Definitional: STP information packet exchanged amongst STP bridges
+      - Three BPDU types:
+         - Configuration (CBPDU), computational use (hmmm)
+         - Topology Change Notification (TCN): announce network topology change
+         - Topology Change Notification Acknowledgment (TCA): acknowledge a TCN.
+      - BPDU header
+         - source MAC: from outbound switch port
+         - destination: 01:80:C2:00:00:00 << STP multicast address (also see 802.1D / 802.1Q)
+   - BPDU guard: protect against invalid configuration (such as portfast on a port-bridge without "bridge assurance"), whereby receipt of a BPDU disables a port -- a disabled port is not blocked, although manual intervention is required to re-enable.
+   - BPDU filter: A corollary to "BPDU guard"; Prevent BPDU traffic on a port (do not send; ignore incoming). Disabled by default.
+      - A rate limit command is also available
    - RSTP (Rapid spanning-tree protocol) is an evolution (circa 2001, 802.1s, 802.1w) from "classic" STP, primarily geared for speed/faster-recovery.
       - Introduces new convergence behaviors and bridge port roles.
+         - Intended to provide "rapid" convergence after network topology changes (in particular, recovery from failure of bridge, port, or LAN).
       - Designed to be backwards-compatible with classic STP.
+      - RSTP is the base unit of MST and Rapid-PVST.
+   - Rapid-PVST
+      - PVST: One STP instance per VLAN
+         - Offers additional load-balancing of overall L2 traffic
+      - Rapid-PVST is an extension of PVST (as PVST, in and of itself, is characterized with slow convergence).
    - MSTP (Multiple Spanning-Tree Protocol)
-      - An extension to RSTP to further develop the usefulness of VLANs.
       - A spanning tree that maps one or more VLANs is called a multiple spanning tree (MST).
-      - Under MSTP, a spanning tree can be defined for individual VLANs or for groups of VLANs.
-      - Blocks all but one possible alternate path within each STP instance.
+         - Under MSTP, a spanning tree can be defined for individual VLANs or for groups of VLANs.
+      - Extends RSTP to support multiple spanning tree instances, whereby one STP instance is associated with multiple VLANs.
+         - Intention is to further develop the usefulness of VLANs.
+      - Same underlying principle as PVST, namely: load balancing by way of multiple forwarding paths.
+      - Failures in one STP instance do not impact -- in and of itself, of course -- other STP instances.
+      - Accomplished via "MST region" such that the participating switches have identical MST configuration.
+         - An MST region can accommodate up to 65 STPs, such that a VLAN can be assigned to only one STP (at a time).
+         - An MST region is identified by a version number, name, and VLAN-to-instance map
       - MSTP instance per VLAN, allowing each VLAN to have a configured root bridge and forwarding topology, thereby
          - Reducing the number of Bridge Protocol Data Units (BPDUs) across the network
          - Reduce CPU stress
+         - Each MST instance is identified by an instance number between 0 to 4094 (hmmm), and is associated with a set of VLANs.
+      - IST (Internal Spanning Tree Instance) is the default spanning tree instance in an MST region (instance 0).
+        It gives the root switch for the region and contains all VLANs that are not assigned to an MST instance.
+      - MSTI (Multiple Spanning Tree instances)
+         - VLANs are assigned through MST configuration statements (and are removed from the IST instance).
+         - These VLANs operate as part of a singular STP topology.
+      - MSTP BPDUs are targeted at a single instance and provide STP information for the entire region.
+         - Further specialized message exchange is not detailed herein (see spec)
+      - Blocks all but one possible alternate path within each STP instance.
    - spanning-tree portfast
       - Causes a switch port to enter the spanning-tree forwarding state immediately, bypassing the listening and learning states.
       - Portfast on switch ports connected to a single workstation or server allows those devices to connect to the network immediately, instead of waiting for the port to transition from the listening and learning states to the forwarding state.
@@ -1022,16 +1492,42 @@
       - When an STP enabled port receives a BPDU, it is put in the error-disabled state.
       - Must manually put the interface back in service. Used to prevent an access port from participating in the spanning tree.
       - Applicable to entire switch or for a specified interface.
+   - Mention of "switchport interface pair(s)" [primary and backup IFs], but the stipulation is that STP is disabled.
+   - CLI: Most commands begin with ```spanning-tree```, although some STP related features accompany the switchport command set.
 - superspine
    - Used to wire separate fabrics together (e.g., two different rooms).
 - switchport
    - Also see: PVID, VRF
+   - AKA switching and bridging (coupling the two terms)
+   - Definitional:
+      - Data link layer frames (L2) between devices within a single subnet. Frames arriving at a hub are bridged or sent to all other ports on the subnet.
+      - A switched port is an Ethernet or port channel interface configured as an L2 IF.
+         - By default, Ethernet and port channel interfaces are in switched port mode.
+      - Each port is assigned a 48-bit MAC (switched ports are not associated with an IP).
+      - A subnet [in a switch] is defined as/by a VLAN.
    - Three kinds: Access-Port (specific VLAN), Trunk-Port (multiple VLANs, focus on "network fabric"), Hybrid-Port (tagged and untagged)
    - Access-Port
       - Untagged port with an assigned PVID (VLAN-ID), which is attached to the traffic that passes through 
       - The guest-host is unaware of any VLAN configuration
       - Carry traffic for one VLAN, as opposed to trunk-ports which carry traffic for multiple VLANs
       - Drop tagged frames that are not tagged with the access PVID.
+   - ```switchport``` enables switching (versus "no switchport", which enables routed/L3/IP)
+   - ```switchport mac address learning``` # Note that MAC address learning is enabled by default on all Ethernet and port channel interfaces.
+   - ```switchport mode``` provides five switching modes:
+      - Access switching mode: The IF is a member of one VLAN, called the access VLAN.
+         - Tagged frames received on the IF are dropped unless they are tagged with the access VLAN.
+         - Frames transmitted from the IF are always untagged.
+      - Trunk switching mode: The IF may be a member of multiple VLANs.
+         - Untagged traffic is associated with the interface's native VLAN.
+      - Dot1q-tunnel switching mode: The IF treats all inbound packets as untagged traffic and handles them as traffic of its access VLAN.
+      - Tap mode: Tap ports receive traffic for replication on one or more tool ports.
+         - The IF may be a member of multiple VLANs, as configured by the switchport.
+         - Untagged traffic is associated with the interface's native VLAN.
+         - Tap ports are in STP forwarding state and prohibit egress traffic.
+         - MAC learning, control plane interaction and traps for inbound traffic are disabled.
+      - Tool mode: Tool ports replicate traffic received by tap ports.
+         - The IF may be a member of multiple VLANs.
+         - MAC learning, control plane interaction and traps for inbound traffic are disabled.
    - Sample CLI session commonly used to configure a switchport between an Ethernet IF and a VLAN IF (implicit VLAN activation):
    ```
       $ interface Ethernet11
@@ -1052,20 +1548,31 @@
       SWITCH(config-if)# vrf forwarding Tenant_A
       SWITCH(config-if)# ip address virtual 10.10.10.1/24  <- "anycast gateway" assiging logical IP to the SVI
    ```
-   - (TBD) What is the difference between "CLI> ip address XXXX" and "CLI> ip address virtual XXXX"
 - TACACS: Terminal Access Controller Access-Control System (goes back to 1984/BBN)
    - protocols handling remote authentication and related services for network access control through a centralized server
-- TAP (traffic access point)
-   - Discounting hardware devices... software VPN adapter (effectively, a virtual network device)
+- TAP (traffic access point) and TUN ("tunnel")
+   - Definitional:
+      - Discounting hardware devices... software VPN adapter (effectively, a virtual network device)
+      - TUN (AKA tunnel) is L3 while TAP (AKA network tap) is L2.
+      - Device drivers facilitate virtual IFs into user space
+   - TAP aggregation
+      - The accumulation of data streams and subsequent dispersal of these streams to devices and applications (that analyze, test, verify, parse, detect, or store data).
+      - Device modes:
+         - Switching mode: The switch performs normal switching and routing operations.
+            - Data mirroring is supported in switching mode.
+            - For emphasis: TAP aggregation is not available in switching mode.
+         - TAP aggregation mode: The switch is a data monitoring device and does not provide normal switching and routing services.
+            - Data mirroring is not available in TAP aggregation mode.
+         - Access control lists, port channels, LAGs, QoS, and VLANs function normally in both modes.
+         - Ethernet and port channel interfaces are configured as TAP and tool ports to support TAP aggregation.
 - ToR (top of rack)
    - A ToR switch is, effectively, a leaf switch.
    - Also see: VTEP (although VTEP is directed to VXLAN).
       - ToR appears to be the abstracted/generalized form of VTEP (so as to not be coupled to VXLAN)
-- Trunk Port
-   - Also see: dot1q, port-channel, switchport
-   - Not expressly configured in our fabric environment(s)
+- Trunk Port, AKA Trunk Group
+   - Also see: dot1q, port-channel, switchport, VLAN
    - Definitional
-      - Traditional: Set of physical interfaces that comprise a "trunk"
+      - Traditional: Set of physical interfaces that comprise a "trunk" and the collection of VLANs whose traffic is carried on the trunk.
       - Extends multiple VLANs through a port-channel
       - Allows data flow for multiple VLANs on associated port' IF/SVI
       - The trunking of the involved VLANs takes place in L2
@@ -1098,32 +1605,42 @@
       - AVD: underlay_routing_protocol is set to EBGP (the default, ignore case) in <fabric.yml>
          - valid_values: ebgp, ibgp, ospf*, isis*, none
 - VARP (Virtual Address Resolution Protocol)  [ Arista ]
-   - https://www.arista.com/en/um-eos/eos-vrrp-and-varp (also a dedicated section in the EOS manual PDF)
-   - VARP is preferred over VRRP (virtual routing redundancy protocol), which employs CPU operations for controller functions.
-   - VARP is an active/active FHRP (first hop redundancy protocol) typically used in conjunction with an MLAG pairing.
-      - Actve/Active -- [Both] switches simultaneously route packets from a common IP address
+   - Definitional
+      - https://www.arista.com/en/um-eos/eos-vrrp-and-varp (also a dedicated section in the EOS manual PDF)
+      - VARP (Virtual ARP) is an Arista creation used in preference to VRRP-v2/v3 (virtual routing redundancy protocol), which employs CPU operations for controller functions.
+      - VARP is an active/active FHRP (first hop redundancy protocol) typically used in conjunction with an MLAG pairing.
+         - Actve/Active: Both switches simultaneously route packets from a common IP address (i.e., anycast).
+      - Each switch is configured with the same set of VIPs on corresponding VLAN IFs with a common virtual MAC.
+         - Note that each switch also receives a non-virtual IP assignment (per VLAN)
+         - All VIPs on all VLAN IFs resolve to the same virtual MAC.
+      - An advantage to using VARP is that there is no control protocol or messaging as required when using VRRP, thereby significantly reducing the burden on switch CPUs.
+   - Example usage: Two switches in an MLAG domain are configured as VARP routers.
       - Although VARP -- as a protocol -- does not require MLAG, VARP assists/enhances MLAG functions.
-      - In VARP, both MLAG peers act as default gateways
-   - On an MLAG pair, both switches coordinate the advertisement of an identical MAC and IP address (the VARP address) for the default gateway on each segment (i.e., VLAN / subnet(s)) [TBD -- is this vxlan-segment?]
-   - In this model, a connected-endpoint sends traffic -- packet-by-packet or flow-by-flow -- to either switch.
-   - Each default gateway can receive and service forwarding requests, making a first hop routing decision (without traversing the peer link). An advantage to using VARP is that there is no control protocol or messaging as required when using VRRP, thereby significantly reducing the burden on switch CPUs.
+      - In VARP, both MLAG peers act as default gateways. Each default gateway can receive and service forwarding requests, making a first hop routing decision (without traversing the peer link).
+      - On an MLAG pair, both switches coordinate the advertisement of an identical MAC and IP address (the VARP address) for the default gateway on each segment (i.e., VLAN / subnet(s))
+         - A VIP is configured "per MLAG per VLAN", while the virtual MAC is configured "per MLAG" only
+         - Reminder: Each MLAG peer must have the same routes available, either through static configuration and/or dynamically learned.
+      - In this model, a connected-endpoint sends traffic -- packet-by-packet or flow-by-flow -- to either switch.
    - Implementing VARP consists of assigning virtual IP addresses to VLAN interfaces and configuring a virtual-MAC address.
-      - The 'ip virtual-router mac-address XXXX' command assigns a virtual-MAC address to the switch.
+      - The ```ip virtual-router mac-address XXXX``` command assigns a virtual-MAC address to the switch.
          - The switch maps all virtual router IP addresses to this MAC address.
          - The virtual-MAC address only applies to inbound packets and is never used as the source field of outbound packets.
       - When the destination MAC of a packet destined to a remote network matches the virtual-MAC address, the MLAG peer forwards the traffic to the next hop destination. Each MLAG peer must have the same routes available, either though static configuration or learned through a dynamic routing protocol.
    - The 'ip virtual-router address XXXX' command assigns a virtual IP address to each VLAN interface' configuration.
       - Not to be confused with 'ip address virtual XXXX' command.
       - Unlike VRRP, the virtual IP address does not have to be in the same subnet as the physical interface.
-   - CLI (example session):
-   ```
-      switch(config)# ip route 192.0.0.0/24 vlan 10 << CRAIG: optional, subnet (seemingly typical practice? [TBD])
-      switch(config)# interface vlan 10
-      switch(config-if-Vl10)# ip address 10.0.0.2/24
-      switch(config-if-Vl10)# ip virtual-router address 192.0.0.6/24 ## Using the subnet above [optional paradigm]
-                                                                     ## Placed into 'source IP address' of ARP messages.
-      switch(config-if-Vl10)# exit
-   ```
+   - CLI:
+      - ```ip virtual-router address <IPv4>``` # assigns a VIPv4 address to a VLAN IF.
+      - ```ip virtual-router mac-address <mac>``` # all VIPs on all VLAN' IFs resolve to the specified virtual MAC
+      - example session
+      ```
+         switch(config)# ip route 192.0.0.0/24 vlan 10 << CRAIG: optional, subnet (seemingly typical practice)
+         switch(config)# interface vlan 10
+         switch(config-if-Vl10)# ip address 10.0.0.2/24
+         switch(config-if-Vl10)# ip virtual-router address 192.0.0.6/24 ## Using the subnet above [optional paradigm]
+                                                                        ## Placed into 'source IP address' of ARP messages.
+         switch(config-if-Vl10)# exit
+      ```
 - VDC (virtual device context)
    - virtualize the network device itself
    - VDC presents a physical switch as multiple devices (~!= VRF)
@@ -1133,10 +1650,26 @@
    - Is associated with Anycast Gateway IP addresses (plural).
    - Is defined within the global configuration mode.
    - Is used across all subnets where an Anycast Gateway exists (reminder: Ethernet is link local in nature)
+- VIP (virtual IP)
+   - Also see VARP (or, VRRPv2/v3), which is the protocol domain context for VIP
+   - The application being MLAG, as assigned to a VLAN IF.
+   - Inbound packets sent to a VIP are redirected to a physical network interface.
+   - More than one VIP can be defined on a VLAN IF (maximum of 500 VIPs)
+   - VIPs support connection redundancy as being assigned to both MLAG switches (i.e., anycast). If an MLAG peer is unavailable, packets sent to the VIP are serviced by the functioning switch.
 - VLAN (NOT vxlan)
-   - Also see: tenant, VXLAN
-   - 802.1Q/dot1Q: effectively synonymous with VLAN -- that is, "tagged VLAN" versus "native VLAN"
-   - Strictly L2 (i.e., switch -- for which we make the distinction between switch and not router)
+   - Also see: tenant, VXLAN, trunk-group
+   - Definitional:
+      - 802.1Q/dot1Q: effectively synonymous with VLAN -- that is, "tagged VLAN" versus "native VLAN"
+      - A group of devices configured to communicate as if attached to a singular network regardless of physicality.
+      - Strictly L2 (i.e., switch -- for which we make the distinction between switch and not router)
+      - VLANs define L2 BDs
+      - VLANs are named as corresponding to a numbering pardaigm (naming convention: "v" concat VLAN-number)
+         - VLAN number (1-4094): unique per VLAN. VLAN 1 exists by default; 4093/4094 reserved for MLAG (convention)
+      - Tenant equates to an instance of VLAN/VXLAN (terminology/concept)
+         - A single tenant subnet is typically represented by a VLAN.
+      - Switches serve as multiport bridges (no inter-VLAN traffic, same and/or different switch [see VLAN routing below])
+      - Switched ports are configurable as members of one or more VLANs.
+   - VLAN state: active or suspended (default to active)
    - Up to 4096 VLANs using 12-bit segment-ID
    - vlan '1' is the default vlan. All other vlans should be assigned an id other than '1'
       - VLAN 1 exists to permit remote switch administration.
@@ -1144,10 +1677,14 @@
       $ vlan participation exclude 1   # For interface, remove the default vlan (which is '1')
       $ vlan participation include 100 # all other vlans need an id other than '1'
    ```
-   - pvid (primary vlan id): ```$ vlan pvid 100``` # set the default vlan ID
-   - Tenant equates to an instance of VLAN/VXLAN (terminology/concept)
-      - A single tenant subnet is typically represented by a VLAN.
-   - VLANs are named, not numbered. Naming convention: "v" concat VLAN-number
+   - Private VLAN
+      - consists of a single primary VLAN and multiple secondary VLANs.
+      - A primary VLAN defines the entire broadcast domain.  
+         - pvid (primary vlan id): ```$ vlan pvid 100``` # set the default vlan ID
+      - Primary VLAN ports communicate with secondary VLAN ports as well as external ports.
+      - Secondary VLANs define the broadcast subdomains (emphasis: SUB-domain).
+         - Two types: isolated (unidirectional traffic between host ports and primary VLAN ports), community (via "community" tagging)
+         - No functioning SVIs on subdomains (state would be "protocol line down", if specified)
    - VLAN Routing with L3 SVIs (AKA L3-VLAN)
       - L2 switch function forwards frames inside each VLAN.
       - L3 routing forwards IP packets between VLANs.
@@ -1161,11 +1698,26 @@
       - Employed due to "non VLAN aware" connected-endpoint devices (such as a PC)
       - A switchport interface can be configured to accept both tagged and untagged traffic
       - Trunk-port interfaces can handle tagged/untagged as well
+   - VLAN translation: Traffic between different VLANs is routed when IP routing is enabled
+      - Only carried out on packets having the dot1q header (tagged frames).
+      - The translation re-writes the VID field without changing any other fields.
+      - The VLAN in the incoming packets is mapped to the internal VLAN of the routed ports and packets
+      - Egressing routed ports are encapsulated with a dot1q header for the specific VLAN.
+      - For egress packets, no priority information is added to the dot1q header and the priority from the incoming encapsulation is retained.
+      - Exemplary CLI: ```switchport vlan mapping 50 60```
+   - Access ports:
+      - carry traffic for one VLAN (the assigned access VLAN).
+      - associate untagged frames with the assigned access VLAN.
+      - drop tagged frames that are not tagged with the assigned access VLAN.
+   - Trunk ports:
+      - carry traffic for multiple VLANs.
+      - Tag frames specify the VLAN for which trunk ports process packets.
+   - CLI: either ```vlan```, ```switchport access vlan``` or ```switchport trunk native vlan``` command(s)
+      - Also: ```switchport mode dot1q-tunnel``` and ```vlan internal allocation policy descending range 4000 4094```
 - VNI (virtual network instance)
    - Also see: VXLAN-header, VRF, vlan-aware-bundle (n VLAN to 1 VRF) versus vlan-based (1 VLAN to 1 VRF)
    - For clarification: Emphasis on "instance" versus "interface"
    - VNI is a tag in the VXLAN-header, while VRF provides the tracking state (1 VNI to 1 VRF' slot)
-   - TBD: How related to EVPN Instance (EVI), RD and set of Import/Export RTs.
    - A VNI is considered to be either L2 (tied to a MAC-VRF) or L3 (tied to an IP-VRF)
    - L2VNI and L3VNI operate independently
    - L2VNI
@@ -1194,9 +1746,12 @@
       - Present in the VXLAN header of the packet on-the-wire when performing VXLAN routing between VTEPs (routing, NOT bridging)
       - Signals, via the Data-Plane to the receiving VTEP, which Routing Table (VRF) the inner-IP headers pertain to (i.e., for lookup and forwarding operations).
          - On the receiving side, the VRF-to-L3VNI mapping (actually, in reverse, as in L3VNI-to-VRF) is used to forward the incoming VXLAN-encapsulated packet to the appropriate VRF.
+   - vni notation dotted (```vxlan vni notation dotted```)
+      - decimal notation: 1 to 16777215
+      - dotted  notation: 0.0.1 to 255.255.255
 - VRF (virtual routing and forwarding)
    - Definitional
-      - Multiple "virtual routers" within one [physical] router
+      - Multiple "virtual routers" within one [physical] router, comprised of the default/global routing table and multiple routing tables assigned to tenants, further discretioned by management or data-plane orientation (i.e., function). Note that management VRFs disable routing.
       - VPN routing and forwarding
       - VRF enables multiple virtual router instances (VRIs) within a physical router (and pairings there-interconnected)
       - Virtual routes are independent (i.e., packets are forwarded only between interfaces on the same VRF)
@@ -1237,7 +1792,7 @@
          - 1 RT per [MAC-]VRF
          - Supports VLAN normalization (optional)
          - Efficient flooding
-         - Lower number of EVPN AD routes (TBD: 'AD')
+         - Lower number of EVPN AD routes
          - VLAN-id overlapping within the node using SPStyle interfaces
          - Easier to add new VLANs
          - Each VLAN-VNI gets a dedicated bridge-table
@@ -1251,10 +1806,11 @@
    - Emphasis is VXLAN: Although a VTEP is "virtual" by conception, the emphasis of the artifact MUST be VXLAN
    - Also see:
       - ToR (top of rack), being the abstracted/generalized form of VTEP as found in concept' oriented literature.
-      - Loopback1, VRF, VXLAN, VXLAN-segment
+      - Loopback1, VRF, VTI, VXLAN, VXLAN-segment
    - Definitional
-      - A VTEP is a gateway (an EVPN gateway)
-      - L2 by nature / definition
+      - A VTEP is a gateway
+         - L2 by nature / definition
+         - A switch with at least one VXLAN Tunnel Interface (VTI)
       - Also known as NVE
       - Map tenants end-hosts to VXLAN segments, performing VXLAN protocol encapsulation / decapsulation.
          - VXLAN is a key multi-tenant solution vehicle
@@ -1278,15 +1834,14 @@
       - VXLAN traffic is L2 in nature, as flowing on the L3 "transport network" (i.e., the underlay) using IP/UDP (vice TCP).
       - Packets are transferred thru the underlay based on the L3 headers (see VXLAN-header).
       - inter-VTEP traffic: encapsulate/de-encapsulate frames as per VXLAN-header.
-   - VXLAN VNI: 24-bit identifier, also referred to as VXLAN-segment identifier
-      - The 24-bit VNID is also employed to maintain L2 isolation between the segments.
-      - VXLAN can support 16m segments (24-bits), far surpassing the 12-bit VLAN limit (i.e., 4096)
+      - VXLANs extend VLANs through the addition of a VXLAN address table that correlates remote MACs to their port and resident switch IP (emphasis: IP and not MAC). Packets destined to a remote connected_endpoint are xmit'd to/thru the VTI. These packets are encapsulated with a VXLAN header which includes the VNI associated with the VLAN and the IP mapping of the destination.  These packets are xmti'd through a UDP socket to the destination VTEP.  The VTI on the remote host extracts the original packet and bridges it to the VLAN associated with the VNI on the remote host.
    - Features, Characteristics
       - equal-cost multipath (ECMP) along with LAG protocols
       - "flood and learn": data-plane learning (predates EVPN)
          - This has been supplanted by EVPN control-plane
       - [VLAN] isolation (tenant space, IP space, VNI space, VRF space, etc)
       - multicast-group (see VXLAN-header) is employed to handle BUM traffic transport
+      - VXLAN and NAT cannot co-exist
    - VLANs are locally significant (per switch) in a VXLAN setup.
       - In other words, a VLAN is locally bound to a VNI, per leaf/VTEP.
       - VXLAN (and VNI by extension) is not trunkable (stated for clarification purposes)
@@ -1297,10 +1852,36 @@
          -  On the other hand, one side can map VLAN 100 while the other side maps VLAN 456 (in the same VNI).
       - Note that service-type 'vlan-aware-bundle' allows many VLANs as mapping to one VNI (on the same leaf/VTEP, since this is a local switch bind).
    - VLAN/id is mapped to a VXLAN/VNI to extend the VLAN across a layer-3 infrastructure (the VXLAN), thereby encapsulating layer-2 into an IP packet and routing it across the network. So, a VLAN-ID is associated with a VNI-ID in a VXLAN environment in order to transport the VLAN across an underlying layer-3 infrastructure.
+   - VXLAN VNI: 24-bit identifier, also referred to as VXLAN-segment identifier
+      - The 24-bit VNID is also employed to maintain L2 isolation between the segments.
+      - An extended L2 network comprises the connected_endpoints attached to VLANs as associated with the same VNI.
+      - VXLAN can support 16m segments (24-bits), far surpassing the 12-bit VLAN limit (i.e., 4096)
+   - VTI (VXLAN Tunnel Interface)
+      - A switchport mapped to the UDP socket of a VXLAN segment.
+      - Packets bridged from a VLAN to the VTI are sent out the UDP socket with a VXLAN header.
+      - Packets arriving on the VTI through the UDP socket are demuxed to VLANs for bridging.
+         - A VTI is treated [by the VLAN' side] as a bridging domain L2' IF.
+   - BUM is supported by HER/flood-lists as traversing a VTI.
+      - HER is required for VXLAN routing and to support VXLANs over MLAG.
+      - Receving VLANs flood as expected, excluding the VTI of course. When a broadcast results in a response, that ARP packet is unicast back to the originating VTEP, as obtained via the VXLAN-address-table (MAC-to-VTEP).
+   - A VXLAN gateway service requires: a designated IP to populate the VXLAN header source, VLAN-to-VNI map, VNI-to-VTEP map and a BUM handling method.
+      - MAC learning is performed [in hardware] from inbound VXLAN packets
+   - Exemplary CLI:
+      ```
+      $ interface vxlan <n> # This command enters into VTI configuration mode
+        vxlan-n> vxlan source-interface <loopback nn>
+        vxlan-n> vxlan udp-port <nnnn> # Default UDP port is '4789'
+        vxlan-n> vxlan vlan 321 vni 123 # VRF aspects aside, assigns vlan 321 to vni 123 (for vxlan 'n')
+        vxlan-n> vxlan multicast-group 227.10.1.1
+        vxlan-n> vxlan flood vtep 10.1.1.1 10.1.1.2 # HER (associate VTEP addresses to an access VNI)
+        vxlan-n> vxlan vlan 101-102 flood vtep 11.1.1.1 11.1.1.2 11.1.1.3 # HER as associated to VLANs
+      ```
 - VXLAN segment
    - AKA: virtual network instance
    - For service-type 'vlan-based', one VLAN maps to one VNI
    - For service-type 'vlan-aware-bundle', many VLANs map to one VNI and are distinguished a la BD/RT/RD.
+   - VXLAN segment is a UDP tunnel identified by the 24-bit VNI ... as assigned to VLAN(s).
+   - Packets that arrive through the VXLAN-segment' UDP port are assumed to be VXLAN encapsulated. The decapsulated packets are propogated to the bridging domain of the recipient VLAN, as determined by the VNI (from the VXLAN header) and looked up in the VNI-VLAN map.
 - VXLAN header (excerpt from RFC-7348)
    - 8-byte VXLAN header
       - Flags (8-bits):
@@ -1318,7 +1899,7 @@
          - It is recommended that the UDP source port number be calculated using a hash of fields from the inner packet (for ECMP) -- one example being a hash of the inner Ethernet frame's headers.
          - This is to enable a level of entropy for the ECMP/load-balancing of the VM-to-VM traffic across the VXLAN overlay.
          - When calculating the UDP source port number in this manner, it is RECOMMENDED that the value be in the dynamic/private port range 49152-65535 [RFC-6335].
-      - UDP Checksum (4-bytes): SHOULD be transmitted as zero. When a packet is received with a UDP checksum of zero, it MUST be accepted for decapsulation.  Optionally, if the encapsulating end point includes a non-zero UDP checksum, it MUST be correctly calculated across the entire packet including the IP header, UDP header, VXLAN header, and encapsulated MAC frame.  When a decapsulating end point receives a packet with a non-zero checksum, it MAY choose to verify the checksum value.  If it chooses to perform such verification, and the verification fails, the packet MUST be dropped.  If the decapsulating destination chooses not to perform the verification, or performs it successfully, the packet MUST be accepted for decapsulation.
+      - UDP Checksum (4-bytes): SHOULD be transmitted as zero. When a packet is received with a UDP checksum of zero, it MUST be accepted for decapsulation. Optionally, if the encapsulating end point includes a non-zero UDP checksum, it MUST be correctly calculated across the entire packet including the IP header, UDP header, VXLAN header, and encapsulated MAC frame. When a decapsulating end point receives a packet with a non-zero checksum, it MAY choose to verify the checksum value. If it chooses to perform such verification, and the verification fails, the packet MUST be dropped. If the decapsulating destination chooses not to perform the verification, or performs it successfully, the packet MUST be accepted for decapsulation.
    - Outer IPv4 Header:
       - source IP identifies the originating VTEP.
       - destination IP is a unicast (destination VTEP) or multicast IP (VXLAN multicast group).
@@ -1326,4 +1907,3 @@
    - Finally, encapsulate original L2 Ethernet frame (i.e., encapsulation)
       - src-VTEP-MAC, dest-VTEP-MAC or other intermediate-L3-router (MAC)
       - while VLAN-type/VLAN-ID are optional
-
