@@ -833,6 +833,7 @@
       - LAG refers to the initial technology to realize link bundling and load balancing without any protocol involved.
       - Manually create a port-channel and add member interfaces to that port-channel.
    - In contrast to LACP, which is a protocol for auto-configuring and maintaining LAG.
+- LER (label edge routing, AKA "edge LSR"): as relating to an MPLS architecture
 - Line Card
    - Associated with Ethernet-Based Fabric.
    - AKA of the following: modular services cards (MSCs), forwarding processor cards (FP), labelswitch processor cards (LSP)
