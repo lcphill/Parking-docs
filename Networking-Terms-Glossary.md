@@ -1834,6 +1834,7 @@
       - NVO architecture encapsulating tenant-based L2 payload into UDP transport across the IP underlay.
       - VXLAN traffic is L2 in nature, as flowing on the L3 "transport network" (i.e., the underlay) using IP/UDP (vice TCP).
       - Packets are transferred thru the underlay based on the L3 headers (see VXLAN-header).
+      - VXLAN encapsulates Ethernet frames (L2) as riding UDP (L4). The default IANA-assigned destination UDP port number is 4789.
       - inter-VTEP traffic: encapsulate/de-encapsulate frames as per VXLAN-header.
       - VXLANs extend VLANs through the addition of a VXLAN address table that correlates remote MACs to their port and resident switch IP (emphasis: IP and not MAC). Packets destined to a remote connected_endpoint are xmit'd to/thru the VTI. These packets are encapsulated with a VXLAN header which includes the VNI associated with the VLAN and the IP mapping of the destination.  These packets are xmti'd through a UDP socket to the destination VTEP.  The VTI on the remote host extracts the original packet and bridges it to the VLAN associated with the VNI on the remote host.
    - Features, Characteristics
