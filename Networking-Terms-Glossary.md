@@ -790,7 +790,7 @@
          - Source endpoint provides: destination-MAC (Layer-2/ARP)
          - The ARP table maps L3 IP addresses to L2 MAC addresses.
          - Remote network endpoint device configuration (IP/MAC) is not stored in the ARP table, but the local subnet default gateway device endpoint configuration is stored within ARP.
-         - The ARP table can be viewed with the comamnd "show ip arp" << presume vendor neutral (?)
+         - The ARP table can be viewed with the command "show ip arp" << presume vendor neutral (?)
       - Different subnet: ... dealt with in a few ways:
          - A static-route entry on the source endpoint informs where the packet needs to be sent (in order to reach the destination network).
          - A default gateway informs the source device where to forward all non-local network traffic.
