@@ -26,6 +26,8 @@
 - programmatic
    - IEEE YANG: See RFC-7950
       - Data modeling
+   - GPCNet (global performance and congestion network test)
+      - As coupled to MPI (message passing interface)
 - Hardware and extraneous
    - 10/40/100G Ethernet
       - Link Fault Signaling (LFS) is inherent in the 10/40/100G Ethernet standard
