@@ -1659,6 +1659,16 @@
    - Inbound packets sent to a VIP are redirected to a physical network interface.
    - More than one VIP can be defined on a VLAN IF (maximum of 500 VIPs)
    - VIPs support connection redundancy as being assigned to both MLAG switches (i.e., anycast). If an MLAG peer is unavailable, packets sent to the VIP are serviced by the functioning switch.
+- VLAN 1
+   - VLAN 1 is a topical discussion all unto itself, and likely varies from vendor to vendor. Hopefully the below is usable to assist inventory formulation across various environments:
+	   - The default name for VLAN 1 is ‘default’. The default name for all other VLANs is VLANnnn
+	   - VLAN 1 exists by default. All other VLANs only exist after they are configured
+	   - The default native VLAN for all interfaces is VLAN 1
+	   - switchport access vlan: By default, VLAN 1 is the access VLAN
+	   - switchport trunk native vlan: The default native VLAN for all interfaces is VLAN 1
+	   - The default tap mode native VLAN for all interfaces is VLAN 1
+	   - dot1q enables encapsulation of traffic on a subinterface in a VLAN. The default VLAN for all interfaces is VLAN 1
+	   - The vrf_vni for the ‘default’ VRF is nominally set to 1
 - VLAN (NOT vxlan)
    - Also see: tenant, VXLAN, trunk-group
    - Definitional:
